@@ -7,8 +7,8 @@ window.YW = window.YW || {};
   'use strict';
 
   var DB_NAME = 'yuwen-tracker';
-  var DB_VER = 1;
-  var STORES = ['exams', 'mistakes', 'templates', 'tagGroups', 'meta', 'images'];
+  var DB_VER = 2;
+  var STORES = ['exams', 'mistakes', 'templates', 'tagGroups', 'students', 'meta', 'images'];
 
   var dbPromise = null;
   var degraded = false;
@@ -40,6 +40,7 @@ window.YW = window.YW || {};
         if (!db.objectStoreNames.contains('tagGroups')) db.createObjectStore('tagGroups', { keyPath: 'id' });
         if (!db.objectStoreNames.contains('meta')) db.createObjectStore('meta', { keyPath: 'key' });
         if (!db.objectStoreNames.contains('images')) db.createObjectStore('images', { keyPath: 'id' });
+        if (!db.objectStoreNames.contains('students')) db.createObjectStore('students', { keyPath: 'id' });
       };
       req.onsuccess = function () { resolve(req.result); };
       req.onerror = function () { reject(req.error || new Error('IndexedDB 打开失败')); };

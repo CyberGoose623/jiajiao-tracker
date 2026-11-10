@@ -7,11 +7,13 @@ window.YW = window.YW || {};
 
   var st = {
     templateId: '',
-    rows: [],            // { item, no, dimension, fullScore, type, label, sectionName, got, tagIds, note, el, inputEl, tagBtn }
-    photoId: null,
-    photoFile: null,
+    rows: [],
+    photoIds: [],        // 已存库的图 id
+    pendingFiles: [],    // 还没保存的新图 [{tmpId, file, url}]
+    removedPhotoIds: [],
     editingExamId: null,
-    populated: false
+    populated: false,
+    builtTemplateId: null
   };
 
   function currentTemplate() {
@@ -20,8 +22,10 @@ window.YW = window.YW || {};
 
   function essayFullOf(tpl) {
     var sum = 0;
-    (tpl && tpl.sections || []).forEach(function (sec) {
-      (sec.items || []).forEach(function (it) { if (it.dimension === 'xiezuo') sum += Number(it.fullScore) || 0; });
+    ((tpl && tpl.sections) || []).forEach(function (sec) {
+      (sec.items || []).forEach(function (it) {
+        if (it.dimension === 'xiezuo') sum += Number(it.fullScore) || 0;
+      });
     });
     return sum;
   }
@@ -30,15 +34,35 @@ window.YW = window.YW || {};
     var sel = YW.$('#entry-template');
     var prev = st.templateId;
     sel.innerHTML = '';
-    if (!YW.state.templates.length) {
-      sel.appendChild(YW.el('option', { value: '' }, ['（没有模板，去设置里导入）']));
+
+    var list = YW.ui.templatesOfCurrentStudent();
+    if (!list.length) {
+      sel.appendChild(YW.el('option', { value: '' }, ['（没有模板，去设置里导入或新建）']));
+      st.templateId = '';
       return;
     }
-    YW.state.templates.forEach(function (t) {
-      sel.appendChild(YW.el('option', { value: t.id }, [t.name + '（' + t.totalScore + ' 分）']));
+
+    var usedIds = C.templatesOfStudent(YW.state.exams, YW.state.currentStudentId);
+    var usedGroup = [], restGroup = [];
+    list.forEach(function (t) {
+      (usedIds.indexOf(t.id) >= 0 ? usedGroup : restGroup).push(t);
     });
-    var keep = prev && YW.state.templates.some(function (t) { return t.id === prev; });
-    st.templateId = keep ? prev : YW.state.templates[0].id;
+
+    function addGroup(label, arr) {
+      if (!arr.length) return;
+      var og = document.createElement('optgroup');
+      og.label = label;
+      arr.forEach(function (t) {
+        var opt = YW.el('option', { value: t.id }, [t.name + '（' + t.totalScore + ' 分）']);
+        og.appendChild(opt);
+      });
+      sel.appendChild(og);
+    }
+    addGroup('这个学生用过的', usedGroup);
+    addGroup('其他模板', restGroup);
+
+    var keep = prev && list.some(function (t) { return t.id === prev; });
+    st.templateId = keep ? prev : list[0].id;
     sel.value = st.templateId;
   }
 
@@ -46,8 +70,7 @@ window.YW = window.YW || {};
     var tpl = currentTemplate();
     st.rows = [];
     if (!tpl) return;
-    var list = C.templateItems(tpl);
-    list.forEach(function (entry) {
+    C.templateItems(tpl).forEach(function (entry) {
       st.rows.push({
         item: entry.item,
         itemId: entry.item.id,
@@ -103,12 +126,14 @@ window.YW = window.YW || {};
         type: 'button', class: 'tag-btn',
         onclick: function () { openTagSheet(row); }
       }, ['错因']);
-      tagBtn.addEventListener('click', function () {});
 
       var tagWrap = YW.el('div', { class: 'item-tags' });
 
       var badges = [
-        YW.el('span', { class: 'badge' + (row.type === 'essay' ? ' type-essay' : (row.type === 'blank' ? ' type-blank' : '')), text: C.TYPE_NAMES[row.type] || '主观' })
+        YW.el('span', {
+          class: 'badge' + (row.type === 'essay' ? ' type-essay' : (row.type === 'blank' ? ' type-blank' : '')),
+          text: C.TYPE_NAMES[row.type] || '主观'
+        })
       ];
 
       var left = YW.el('div', { class: 'item-main' }, [
@@ -140,8 +165,16 @@ window.YW = window.YW || {};
     });
 
     if (!st.rows.length) {
-      host.appendChild(YW.el('div', { class: 'empty', text: '这个模板里没有题目。检查一下模板 JSON 的 sections。' }));
+      host.appendChild(YW.el('div', { class: 'empty', text: '这个模板里没有题目。检查一下模板的 sections。' }));
     }
+  }
+
+  function tagName(id) {
+    var out = id;
+    (YW.state.tagGroups || []).forEach(function (g) {
+      (g.tags || []).forEach(function (t) { if (t.id === id) out = t.name; });
+    });
+    return out;
   }
 
   function paintRowTags(row) {
@@ -158,14 +191,6 @@ window.YW = window.YW || {};
     row.tagBtn.textContent = row.tagIds.length ? '错因 ' + row.tagIds.length : '错因';
   }
 
-  function tagName(id) {
-    var out = id;
-    (YW.state.tagGroups || []).forEach(function (g) {
-      (g.tags || []).forEach(function (t) { if (t.id === id) out = t.name; });
-    });
-    return out;
-  }
-
   function onScoreInput(row) {
     var v = YW.parseScore(row.inputEl.value);
     var bad = isNaN(v) || v < 0 || v > row.fullScore;
@@ -177,7 +202,6 @@ window.YW = window.YW || {};
 
   function onScoreBlur(row) {
     if (row.inputEl.value.trim() === '') {
-      row.got = 0;
       row.inputEl.value = '0';
       row.got = 0;
       updateLive();
@@ -188,7 +212,6 @@ window.YW = window.YW || {};
       row.inputEl.value = '0';
       row.got = 0;
     } else {
-      // 超分不自动改，保留原样让用户自己看
       row.got = v;
     }
     updateLive();
@@ -224,16 +247,21 @@ window.YW = window.YW || {};
     }
   }
 
-  /* ---------- 错因面板 ---------- */
+  /* ---------- 错因面板（只显示当前模板科目的标签） ---------- */
   function openTagSheet(row) {
+    var tpl = currentTemplate();
+    var groups = C.tagGroupsFor(tpl, YW.state.tagGroups);
     var body = YW.el('div');
     var picked = row.tagIds.slice();
 
-    if (!YW.state.tagGroups.length) {
-      body.appendChild(YW.el('p', { class: 'hint', text: '还没有错因词表。去设置页导入 error-tags.json。' }));
+    if (!groups.length) {
+      body.appendChild(YW.el('p', {
+        class: 'hint',
+        text: '这份模板的科目「' + C.subjectOf(tpl) + '」还没有错因标签。去设置页的错因词表里加。'
+      }));
     }
 
-    YW.state.tagGroups.forEach(function (g) {
+    groups.forEach(function (g) {
       var cloud = YW.el('div', { class: 'tag-cloud' });
       (g.tags || []).forEach(function (t) {
         var chip = YW.el('button', {
@@ -282,6 +310,66 @@ window.YW = window.YW || {};
     YW.ui.openSheet('第 ' + row.no + ' 题 · ' + (row.label || '错因'), body, [clear, done]);
   }
 
+  /* ---------- 照片 ---------- */
+  function paintPhotos() {
+    var host = YW.$('#entry-photo-list');
+    if (!host) return;
+
+    // 释放上一轮创建的对象 URL，避免反复切页累积
+    (st.photoUrls || []).forEach(function (u) { try { URL.revokeObjectURL(u); } catch (e) {} });
+    st.photoUrls = [];
+
+    host.innerHTML = '';
+
+    st.photoIds.forEach(function (id) {
+      var item = YW.el('div', { class: 'thumb' }, [
+        YW.el('div', { class: 'thumb-img loading', text: '…' }),
+        YW.el('button', {
+          type: 'button', class: 'thumb-del', 'aria-label': '删除这张照片',
+          onclick: function () {
+            st.removedPhotoIds.push(id);
+            st.photoIds = st.photoIds.filter(function (x) { return x !== id; });
+            paintPhotos();
+          }
+        }, ['×'])
+      ]);
+      host.appendChild(item);
+      YW.photos.url(id).then(function (u) {
+        var box = item.querySelector('.thumb-img');
+        if (!box) { if (u) URL.revokeObjectURL(u); return; }
+        box.classList.remove('loading');
+        if (u) {
+          st.photoUrls.push(u);
+          box.textContent = '';
+          box.style.backgroundImage = 'url(' + u + ')';
+        } else {
+          box.textContent = '丢了';
+        }
+      });
+    });
+
+    st.pendingFiles.forEach(function (p) {
+      host.appendChild(YW.el('div', { class: 'thumb is-new' }, [
+        YW.el('div', { class: 'thumb-img', style: 'background-image:url(' + p.url + ')' }),
+        YW.el('span', { class: 'thumb-tag', text: '待保存' }),
+        YW.el('button', {
+          type: 'button', class: 'thumb-del', 'aria-label': '取消这张',
+          onclick: function () {
+            URL.revokeObjectURL(p.url);
+            st.pendingFiles = st.pendingFiles.filter(function (x) { return x.tmpId !== p.tmpId; });
+            paintPhotos();
+          }
+        }, ['×'])
+      ]));
+    });
+
+    var total = st.photoIds.length + st.pendingFiles.length;
+    YW.$('#entry-photo-hint').textContent = total
+      ? '已挂 ' + total + ' 张'
+      : '可选，可以挂多张（正面、反面、作文页）';
+    YW.$('#entry-photo-clear').hidden = total === 0;
+  }
+
   /* ---------- 保存 ---------- */
   function nextExamId(date) {
     var base = 'exam-' + date;
@@ -291,7 +379,7 @@ window.YW = window.YW || {};
     return base + '-' + n;
   }
 
-  function autoEssayLevel(tpl) {
+  function autoEssayLevel() {
     var essay = st.rows.filter(function (r) { return r.dimension === 'xiezuo'; });
     if (!essay.length) return null;
     var got = 0, full = 0;
@@ -308,6 +396,9 @@ window.YW = window.YW || {};
   function save() {
     var tpl = currentTemplate();
     if (!tpl) { YW.ui.toast('先选一个模板', 3000); return; }
+
+    var student = YW.ui.currentStudent();
+    if (!student) { YW.ui.toast('先建一个学生', 3000); return; }
 
     var bad = invalidRows();
     if (bad.length) {
@@ -343,41 +434,58 @@ window.YW = window.YW || {};
       id: id,
       date: date,
       name: name,
+      studentId: student.id,
       templateId: tpl.id,
-      templateSnapshot: YW.clone(tpl),   // 必须：历史统计只认自己的快照
+      templateSnapshot: YW.clone(tpl),
       answers: answers,
-      essayLevel: manualLevel !== '' ? Number(manualLevel) : autoEssayLevel(tpl),
-      paperImageId: st.photoId || null,
+      essayLevel: manualLevel !== '' ? Number(manualLevel) : autoEssayLevel(),
+      paperImageIds: st.photoIds.slice(),
       createdAt: Date.now()
     };
 
-    var oldPhoto = st.editingExamId
-      ? (YW.state.exams.filter(function (e) { return e.id === st.editingExamId; })[0] || {}).paperImageId
-      : null;
+    // 新图落库
+    var tasks = st.pendingFiles.map(function (p) {
+      return YW.photos.save(p.file).then(function (pid) {
+        exam.paperImageIds.push(pid);
+        return pid;
+      });
+    });
 
-    var photoTask = st.photoFile
-      ? YW.photos.save(st.photoFile).then(function (pid) { exam.paperImageId = pid; })
-      : Promise.resolve();
-
-    photoTask.then(function () {
+    Promise.all(tasks).then(function () {
       return YW.db.put('exams', exam);
     }).then(function () {
-      if (oldPhoto && oldPhoto !== exam.paperImageId) return YW.photos.remove(oldPhoto);
+      // 删掉被移除的旧图
+      return Promise.all(st.removedPhotoIds.map(function (pid) {
+        return YW.photos.remove(pid).catch(function () {});
+      }));
     }).then(function () {
-      return YW.entry.loadAll();
-    }).then(function () {
-      var wasEditing = !!st.editingExamId;
-      resetForm(tpl);
-      YW.ui.toast(wasEditing ? '已更新这次考试' : '已保存：' + name, 3000);
-      // 提醒导出备份
-      var last = YW.state.settings.lastBackupAt;
-      if (!last || YW.daysBetween(last, Date.now()) >= 14) {
-        setTimeout(function () {
-          YW.ui.toast('数据只存在这台设备上，去设置页导出一份备份', 4200);
-        }, 2600);
-      }
-      YW.analysis.render();
-      YW.settings.render();
+      // 自动生成错题
+      var plan = C.buildMistakes(exam, YW.state.mistakes, tpl);
+      var writes = [];
+      plan.create.forEach(function (m) { writes.push(YW.db.put('mistakes', m)); });
+      plan.update.forEach(function (m) { writes.push(YW.db.put('mistakes', m)); });
+      plan.resolve.forEach(function (m) {
+        m.resolved = true;
+        writes.push(YW.db.put('mistakes', m));
+      });
+      return Promise.all(writes).then(function () { return plan; });
+    }).then(function (plan) {
+      return YW.entry.loadAll().then(function () {
+        var wasEditing = !!st.editingExamId;
+        resetForm(tpl);
+        var msg = wasEditing ? '已更新这次考试' : '已保存：' + name;
+        if (plan.create.length) msg += '，自动记下 ' + plan.create.length + ' 道错题';
+        YW.ui.toast(msg, 3400);
+
+        var last = YW.state.settings.lastBackupAt;
+        if (!last || YW.daysBetween(last, Date.now()) >= 14) {
+          setTimeout(function () {
+            YW.ui.toast('数据只存在这台设备上，去设置页导出一份备份', 4200);
+          }, 2800);
+        }
+        YW.analysis.render();
+        YW.settings.render();
+      });
     }).catch(function (err) {
       console.error(err);
       YW.ui.toast('保存失败：' + (err && err.message ? err.message : '未知错误'), 4200);
@@ -386,16 +494,14 @@ window.YW = window.YW || {};
 
   function resetForm(tpl) {
     st.editingExamId = null;
-    st.photoId = null;
-    st.photoFile = null;
+    st.photoIds = [];
+    st.removedPhotoIds = [];
+    st.pendingFiles.forEach(function (p) { URL.revokeObjectURL(p.url); });
+    st.pendingFiles = [];
     YW.$('#entry-name').value = '';
     YW.$('#entry-date').value = YW.todayISO();
     YW.$('#entry-essay-level').value = '';
-    YW.$('#entry-photo-hint').textContent = '可选，挂一张原卷照片';
-    YW.$('#entry-photo-clear').hidden = true;
-    var pv = YW.$('#entry-photo-preview');
-    pv.hidden = true;
-    pv.querySelector('img').removeAttribute('src');
+    paintPhotos();
     st.templateId = tpl.id;
     YW.$('#entry-template').value = tpl.id;
     buildRows();
@@ -408,16 +514,12 @@ window.YW = window.YW || {};
   function syncEssayField() {
     var tpl = currentTemplate();
     var full = essayFullOf(tpl);
-    var field = YW.$('#essay-level-field');
-    field.hidden = full <= 0;
+    YW.$('#essay-level-field').hidden = full <= 0;
     var hintEl = YW.$('#essay-hint');
+    if (!hintEl) return;
     if (full > 0 && full !== 50) {
-      if (!hintEl) {
-        hintEl = YW.el('p', { class: 'hint', id: 'essay-hint' });
-        field.appendChild(hintEl);
-      }
       hintEl.textContent = '这份模板作文满分 ' + YW.fmt(full) + ' 分，档位区间按 50 分制折算后对应。';
-    } else if (hintEl) {
+    } else {
       hintEl.textContent = '';
     }
   }
@@ -429,11 +531,17 @@ window.YW = window.YW || {};
     var tpl = exam.templateSnapshot || YW.state.templates.filter(function (t) { return t.id === exam.templateId; })[0];
     if (!tpl) { YW.ui.toast('这条记录没有模板快照，改不了', 3200); return; }
 
+    // 切到这条记录所属的学生
+    if (exam.studentId && exam.studentId !== YW.state.currentStudentId) {
+      YW.state.currentStudentId = exam.studentId;
+      YW.db.setMeta('currentStudentId', exam.studentId);
+      YW.ui.renderStudentBar();
+    }
+
     st.editingExamId = exam.id;
     st.templateId = tpl.id;
-    if (!YW.state.templates.some(function (t) { return t.id === tpl.id && t.totalScore === tpl.totalScore; })) {
-      // 快照模板可能已从列表删除，临时挂上以便显示
-      if (!YW.state.templates.some(function (t) { return t.id === tpl.id; })) YW.state.templates.push(tpl);
+    if (!YW.state.templates.some(function (t) { return t.id === tpl.id; })) {
+      YW.state.templates.push(tpl);
     }
     fillTemplateSelect();
     YW.$('#entry-template').value = tpl.id;
@@ -442,10 +550,8 @@ window.YW = window.YW || {};
     YW.$('#entry-date').value = exam.date;
     YW.$('#entry-essay-level').value = exam.essayLevel == null ? '' : String(exam.essayLevel);
 
-    // 先用快照建行，再灌分数
     st.rows = [];
-    var items = C.templateItems(tpl);
-    items.forEach(function (entry) {
+    C.templateItems(tpl).forEach(function (entry) {
       var ans = (exam.answers || []).filter(function (a) { return a.itemId === entry.item.id; })[0];
       st.rows.push({
         item: entry.item,
@@ -468,18 +574,11 @@ window.YW = window.YW || {};
     updateLive();
     st.builtTemplateId = tpl.id;
 
-    st.photoId = exam.paperImageId || null;
-    st.photoFile = null;
-    if (st.photoId) {
-      YW.$('#entry-photo-hint').textContent = '已挂原卷照片';
-      YW.$('#entry-photo-clear').hidden = false;
-      YW.photos.url(st.photoId).then(function (u) {
-        if (!u) return;
-        var pv = YW.$('#entry-photo-preview');
-        pv.hidden = false;
-        pv.querySelector('img').src = u;
-      });
-    }
+    st.photoIds = (exam.paperImageIds || (exam.paperImageId ? [exam.paperImageId] : [])).slice();
+    st.removedPhotoIds = [];
+    st.pendingFiles.forEach(function (p) { URL.revokeObjectURL(p.url); });
+    st.pendingFiles = [];
+    paintPhotos();
 
     YW.ui.go('entry');
     YW.ui.toast('已载入《' + exam.name + '》，改完再保存会覆盖这一条', 3800);
@@ -488,10 +587,12 @@ window.YW = window.YW || {};
   function loadAll() {
     return Promise.all([
       YW.db.all('exams'),
+      YW.db.all('mistakes'),
       YW.db.getMeta('lastBackupAt', null)
     ]).then(function (res) {
       YW.state.exams = res[0] || [];
-      YW.state.settings.lastBackupAt = res[1];
+      YW.state.mistakes = res[1] || [];
+      YW.state.settings.lastBackupAt = res[2];
       YW.ui.renderBackupLine();
     });
   }
@@ -502,7 +603,6 @@ window.YW = window.YW || {};
       YW.$('#entry-date').value = YW.todayISO();
       st.populated = true;
     }
-    // 只有模板换了或还没渲染过才重建，避免切页回来把填了一半的分清空
     if (!st.rows.length || st.builtTemplateId !== st.templateId) {
       buildRows();
       renderItems();
@@ -510,6 +610,7 @@ window.YW = window.YW || {};
       updateLive();
       st.builtTemplateId = st.templateId;
     }
+    paintPhotos();
   }
 
   function bind() {
@@ -520,6 +621,7 @@ window.YW = window.YW || {};
       renderItems();
       syncEssayField();
       updateLive();
+      st.builtTemplateId = st.templateId;
     });
 
     YW.$('#entry-save').addEventListener('click', save);
@@ -529,30 +631,26 @@ window.YW = window.YW || {};
     });
 
     YW.$('#entry-photo-input').addEventListener('change', function (e) {
-      var file = e.target.files && e.target.files[0];
-      if (!file) return;
-      if (!/^image\//.test(file.type)) { YW.ui.toast('选一张图片', 2600); return; }
-      st.photoFile = file;
-      YW.$('#entry-photo-hint').textContent = '照片已选，保存时一起压缩存下来';
-      YW.$('#entry-photo-clear').hidden = false;
-      YW.readFileDataURL(file).then(function (u) {
-        var pv = YW.$('#entry-photo-preview');
-        pv.hidden = false;
-        pv.querySelector('img').src = u;
+      var files = Array.prototype.slice.call(e.target.files || []);
+      files.forEach(function (file) {
+        if (!/^image\//.test(file.type)) return;
+        st.pendingFiles.push({
+          tmpId: YW.uid('tmp'),
+          file: file,
+          url: URL.createObjectURL(file)
+        });
       });
+      paintPhotos();
       e.target.value = '';
     });
 
     YW.$('#entry-photo-clear').addEventListener('click', function () {
-      st.photoFile = null;
-      var old = st.photoId;
-      st.photoId = null;
-      YW.$('#entry-photo-hint').textContent = '可选，挂一张原卷照片';
-      YW.$('#entry-photo-clear').hidden = true;
-      var pv = YW.$('#entry-photo-preview');
-      pv.hidden = true;
-      pv.querySelector('img').removeAttribute('src');
-      if (old && st.editingExamId) YW.photos.remove(old);
+      st.photoIds.forEach(function (id) { st.removedPhotoIds.push(id); });
+      st.photoIds = [];
+      st.pendingFiles.forEach(function (p) { URL.revokeObjectURL(p.url); });
+      st.pendingFiles = [];
+      paintPhotos();
+      YW.ui.toast('保存后这些照片会被删掉', 2600);
     });
   }
 
@@ -562,7 +660,8 @@ window.YW = window.YW || {};
     loadAll: loadAll,
     loadExam: loadExam,
     resetForm: resetForm,
-    currentTemplate: currentTemplate
+    currentTemplate: currentTemplate,
+    state: st
   };
 
   YW.rowsScrollTo = function (row) {

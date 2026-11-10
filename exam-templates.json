@@ -1,12 +1,13 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "templates": [
     {
-      "id": "tpl-xa-g7-120",
-      "name": "西安市初一语文 120 分卷",
+      "id": "tpl-xa-g7-yuwen",
+      "name": "西安-初中-语文",
+      "subject": "语文",
       "totalScore": 120,
       "duration": 150,
-      "note": "参考陕西省中考语文结构，各校自行调整。积累和运用 20 + 阅读 50 + 写作 50。",
+      "note": "参考陕西省中考语文结构。积累 20 + 阅读 50 + 写作 50。各校自行调整。",
       "sections": [
         {
           "id": "sec-jilei",

@@ -11,7 +11,54 @@ window.YW = window.YW || {};
     return '#' + (idx + 1);
   }
 
-  function renderStrip(exams, opts) {
+  /** 当前学生 + 当前模板下的考试（按日期升序） */
+  function scopedExams() {
+    var mine = C.byStudent(YW.state.exams, YW.state.currentStudentId);
+    var tplId = YW.state.view.templateId;
+    if (!tplId) return [];
+    return C.sortExams(C.byTemplate(mine, tplId));
+  }
+
+  function currentTemplate() {
+    return YW.state.templates.filter(function (t) { return t.id === YW.state.view.templateId; })[0] || null;
+  }
+
+  function fillTemplateSelect() {
+    var sel = YW.$('#analysis-template');
+    var prev = YW.state.view.templateId;
+    sel.innerHTML = '';
+
+    var list = YW.ui.templatesOfCurrentStudent();
+    if (!list.length) {
+      sel.appendChild(YW.el('option', { value: '' }, ['这个学生还没有模板']));
+      YW.state.view.templateId = '';
+      return;
+    }
+
+    var usedIds = C.templatesOfStudent(YW.state.exams, YW.state.currentStudentId);
+    var usedGroup = [], restGroup = [];
+    list.forEach(function (t) {
+      (usedIds.indexOf(t.id) >= 0 ? usedGroup : restGroup).push(t);
+    });
+
+    function addGroup(label, arr) {
+      if (!arr.length) return;
+      var og = document.createElement('optgroup');
+      og.label = label;
+      arr.forEach(function (t) {
+        og.appendChild(YW.el('option', { value: t.id }, [t.name]));
+      });
+      sel.appendChild(og);
+    }
+    addGroup('这个学生用过的', usedGroup);
+    addGroup('其他模板', restGroup);
+
+    var keep = prev && list.some(function (t) { return t.id === prev; });
+    YW.state.view.templateId = keep ? prev : list[0].id;
+    sel.value = YW.state.view.templateId;
+  }
+
+  function renderStrip(exams, opts, tpl) {
     var host = YW.$('#analysis-strip');
     host.innerHTML = '';
     if (!exams.length) return;
@@ -24,8 +71,12 @@ window.YW = window.YW || {};
     var cells = [
       { k: '最近一次', v: C.pct(t.rate), sub: last.name },
       { k: '得分', v: YW.fmt(t.got) + ' / ' + YW.fmt(t.full), sub: '' },
-      { k: '比上一次', v: delta == null ? '—' : (delta >= 0 ? '+' : '') + (delta * 100).toFixed(1) + 'pt', sub: delta == null ? '' : (delta >= 0 ? '有进步' : '退了一点') },
-      { k: '考试次数', v: String(exams.length), sub: opts && opts.excludeEssay ? '已排除作文' : '含作文' }
+      {
+        k: '比上一次',
+        v: delta == null ? '—' : (delta >= 0 ? '+' : '') + (delta * 100).toFixed(1) + 'pt',
+        sub: delta == null ? '' : (delta >= 0 ? '有进步' : '退了一点')
+      },
+      { k: '考试次数', v: String(exams.length), sub: opts && opts.excludeEssay ? '已排除作文' : (C.subjectOf(tpl) || '') }
     ];
 
     host.innerHTML = cells.map(function (c) {
@@ -47,7 +98,6 @@ window.YW = window.YW || {};
 
   function renderTrend(exams, opts) {
     var dim = YW.state.view.trendDim;
-    var hist = YW.state.historyHidden || {};
     var points = exams.map(function (e, i) {
       var t = dim ? { got: 0, full: 0, rate: C.dimRate(e, dim, opts) } : C.totals(e, opts);
       if (dim) {
@@ -65,7 +115,7 @@ window.YW = window.YW || {};
       };
     }).filter(function (p) { return p.value != null; });
 
-    YW.charts.trend(YW.$('#chart-trend'), { points: points, historyHidden: hist });
+    YW.charts.trend(YW.$('#chart-trend'), { points: points });
   }
 
   function renderRadar(exams, opts) {
@@ -148,15 +198,15 @@ window.YW = window.YW || {};
     YW.charts.heat(YW.$('#chart-heat'), { rows: rows, cols: cols });
   }
 
-  function renderTags(opts) {
-    var stats = C.tagStats(YW.state.exams, opts).slice(0, 8);
+  function renderTags(exams, opts, tpl) {
+    var groups = C.tagGroupsFor(tpl, YW.state.tagGroups);
+    var stats = C.tagStats(exams, Object.assign({ tagGroups: groups }, opts)).slice(0, 8);
     YW.charts.bars(YW.$('#chart-tags'), { entries: stats });
   }
 
   function renderLevels(exams) {
     var pts = exams.map(function (e, i) {
-      var lv = C.essayLevelOf(e);
-      return { label: shortLabel(e, i), level: lv, name: e.name };
+      return { label: shortLabel(e, i), level: C.essayLevelOf(e), name: e.name };
     });
     YW.charts.levels(YW.$('#chart-level'), { points: pts });
   }
@@ -167,7 +217,7 @@ window.YW = window.YW || {};
     var sorted = exams.slice().reverse();
 
     if (!sorted.length) {
-      host.appendChild(YW.el('div', { class: 'empty', text: '还没有考试记录。' }));
+      host.appendChild(YW.el('div', { class: 'empty', text: '这个学生在这份模板下还没有考试记录。' }));
       YW.$('#records-count').textContent = '';
       return;
     }
@@ -175,20 +225,29 @@ window.YW = window.YW || {};
 
     sorted.forEach(function (e) {
       var t = C.totals(e, opts);
-      var row = YW.el('button', { type: 'button', class: 'exam-row', onclick: function () { YW.detail.open(e.id); } }, [
+      host.appendChild(YW.el('button', {
+        type: 'button', class: 'exam-row',
+        onclick: function () { YW.detail.open(e.id); }
+      }, [
         YW.el('div', { class: 'exam-main' }, [
           YW.el('div', { class: 'exam-name', text: e.name }),
-          YW.el('div', { class: 'exam-meta', text: YW.formatDate(e.date) + ' · ' + YW.fmt(t.got) + '/' + YW.fmt(t.full) + ' 分' })
+          YW.el('div', {
+            class: 'exam-meta',
+            text: YW.formatDate(e.date) + ' · ' + YW.fmt(t.got) + '/' + YW.fmt(t.full) + ' 分'
+          })
         ]),
         YW.el('div', { class: 'exam-rate' + (t.rate != null && t.rate < 0.6 ? ' low' : ''), text: C.pct(t.rate) })
-      ]);
-      host.appendChild(row);
+      ]));
     });
   }
 
   function render() {
     var view = YW.state.view;
     var opts = { excludeEssay: view.excludeEssay };
+
+    // 学生或模板为空时先兜住
+    if (!YW.state.students.length) return;
+    fillTemplateSelect();
 
     document.querySelectorAll('#seg-essay .seg-btn').forEach(function (b) {
       var on = (b.dataset.exclude === '1') === !!view.excludeEssay;
@@ -200,14 +259,22 @@ window.YW = window.YW || {};
     fillDimSelect();
     YW.$('#trend-dim').value = view.trendDim || '';
 
-    var all = C.sortExams(YW.state.exams);
+    var tpl = currentTemplate();
+    var all = scopedExams();
     var exams = C.recent(all, view.range);
 
-    renderStrip(exams, opts);
+    var scopeEl = YW.$('#analysis-scope');
+    if (scopeEl) {
+      var s = YW.ui.currentStudent();
+      scopeEl.textContent = (s ? s.name : '—') + ' · ' + (tpl ? tpl.name : '没有模板') +
+        (opts.excludeEssay ? ' · 已排除作文' : '');
+    }
+
+    renderStrip(exams, opts, tpl);
     renderTrend(exams, opts);
     renderRadar(exams, opts);
     renderHeat(exams, opts);
-    renderTags(opts);
+    renderTags(exams, opts, tpl);
     renderLevels(exams);
     renderExamList(exams, opts);
   }
@@ -229,7 +296,12 @@ window.YW = window.YW || {};
       YW.state.view.trendDim = e.target.value;
       render();
     });
+
+    YW.$('#analysis-template').addEventListener('change', function (e) {
+      YW.state.view.templateId = e.target.value;
+      render();
+    });
   }
 
-  YW.analysis = { bind: bind, render: render };
+  YW.analysis = { bind: bind, render: render, scopedExams: scopedExams };
 })(window.YW);

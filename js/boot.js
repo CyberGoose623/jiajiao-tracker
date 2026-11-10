@@ -57,6 +57,10 @@ window.YW = window.YW || {};
   function applyTagsDoc(doc) {
     var groups = Array.isArray(doc) ? doc : doc.groups;
     if (!Array.isArray(groups) || !groups.length) return '没有 groups 数组';
+    // 兼容 v1：没有 subject 的组一律归到"语文"
+    groups = groups.map(function (g) {
+      return Object.assign({}, g, { subject: g.subject || '语文' });
+    });
     var v = YW.calc.validateTags({ groups: groups });
     if (!v.ok) return v.errors.slice(0, 2).join('；');
     YW.state.tagGroups = groups;
@@ -68,8 +72,65 @@ window.YW = window.YW || {};
       YW.state.templates = YW.clone(YW.fallback.templates);
     }
     if (!YW.state.tagGroups.length && YW.fallback && YW.fallback.tagGroups) {
-      YW.state.tagGroups = YW.clone(YW.fallback.tagGroups);
+      YW.state.tagGroups = YW.clone(YW.fallback.tagGroups).map(function (g) {
+        return Object.assign({}, g, { subject: g.subject || '语文' });
+      });
     }
+  }
+
+  /**
+   * 老数据迁移：
+   * - 没有学生的，建一个默认学生
+   * - 考试没有 studentId 的，挂到默认学生
+   * - paperImageId（单张）改成 paperImageIds（数组）
+   */
+  function migrate(exams, mistakes, students) {
+    var changed = false;
+
+    if (!students.length) {
+      students.push({
+        id: 'stu-default',
+        name: '学生 1',
+        createdAt: Date.now()
+      });
+      changed = true;
+    }
+    var defaultId = students[0].id;
+
+    exams.forEach(function (e) {
+      if (!e.studentId) { e.studentId = defaultId; changed = true; }
+      if (!Array.isArray(e.paperImageIds)) {
+        e.paperImageIds = e.paperImageId ? [e.paperImageId] : [];
+        changed = true;
+      }
+    });
+
+    // 记录引用的模板如果已经不在列表里（改过 id、换过文件），
+    // 用记录自带的快照补回列表，否则这些考试在分析页里选不到、等于看不见
+    var known = {};
+    (YW.state.templates || []).forEach(function (t) { known[t.id] = true; });
+    exams.forEach(function (e) {
+      if (!e.templateId || known[e.templateId]) return;
+      if (!e.templateSnapshot || !e.templateSnapshot.sections) return;
+      var snap = YW.clone(e.templateSnapshot);
+      snap.name = (snap.name || e.templateId) + '（历史）';
+      if (!snap.subject) snap.subject = '语文';
+      YW.state.templates.push(snap);
+      known[e.templateId] = true;
+      changed = true;
+    });
+
+    mistakes.forEach(function (m) {
+      if (m.studentId === undefined) {
+        var exam = exams.filter(function (e) { return e.id === m.examId; })[0];
+        m.studentId = exam ? exam.studentId : defaultId;
+        changed = true;
+      }
+      if (m.mastered === undefined) { m.mastered = false; changed = true; }
+      if (m.resolved === undefined) { m.resolved = false; changed = true; }
+    });
+
+    return { changed: changed, defaultId: defaultId };
   }
 
   function registerSW() {
@@ -87,6 +148,11 @@ window.YW = window.YW || {};
       var tab = e.target.closest('.tab');
       if (!tab) return;
       YW.ui.go(tab.dataset.go);
+    });
+
+    // 顶部学生切换
+    YW.$('#student-bar').addEventListener('click', function () {
+      YW.ui.openStudentPicker();
     });
 
     // iOS：输入框获得焦点时，确保不被键盘挡住
@@ -117,6 +183,7 @@ window.YW = window.YW || {};
   }
 
   function renderAll() {
+    YW.ui.renderStudentBar();
     YW.entry.refresh();
     YW.analysis.render();
     YW.settings.render();
@@ -140,21 +207,29 @@ window.YW = window.YW || {};
         YW.db.all('tagGroups'),
         YW.db.all('exams'),
         YW.db.all('mistakes'),
-        YW.db.getMeta('lastBackupAt', null)
+        YW.db.all('students'),
+        YW.db.getMeta('lastBackupAt', null),
+        YW.db.getMeta('currentStudentId', null)
       ]);
     }).then(function (res) {
       YW.state.templates = res[0] || [];
       YW.state.tagGroups = res[1] || [];
       YW.state.exams = res[2] || [];
       YW.state.mistakes = res[3] || [];
-      YW.state.settings.lastBackupAt = res[4];
+      YW.state.students = res[4] || [];
+      YW.state.settings.lastBackupAt = res[5];
+
+      var savedStudentId = res[6];
 
       // 外部文件优先（内容变化时）
       return Promise.all([
         syncFile('exam-templates.json', 'sync.templates', applyTemplatesDoc, '试卷模板'),
         syncFile('error-tags.json', 'sync.tags', applyTagsDoc, '错因词表')
-      ]);
-    }).then(function (results) {
+      ]).then(function (results) {
+        return { results: results, savedStudentId: savedStudentId };
+      });
+    }).then(function (ctx) {
+      var results = ctx.results;
       var failed = results.filter(function (r) { return !r.ok; });
       var changed = results.filter(function (r) { return r.ok && r.changed; });
 
@@ -173,10 +248,25 @@ window.YW = window.YW || {};
         YW.ui.toast('已从文件更新：' + changed.map(function (r) { return r.label; }).join('、'), 3000);
       }
 
-      // 首次运行：把当前的模板/词表落库
-      var writes = [];
+      // 迁移旧数据
+      var mig = migrate(YW.state.exams, YW.state.mistakes, YW.state.students);
+      var defaultId = mig.defaultId;
+
+      // 恢复上次选中的学生，失效就取第一个
+      var current = ctx.savedStudentId;
+      var valid = YW.state.students.some(function (s) { return s.id === current; });
+      YW.state.currentStudentId = valid ? current : defaultId;
+
+      var writes = [
+        YW.db.putMany('students', YW.state.students),
+        YW.db.setMeta('currentStudentId', YW.state.currentStudentId)
+      ];
       if (YW.state.templates.length) writes.push(YW.db.putMany('templates', YW.state.templates));
       if (YW.state.tagGroups.length) writes.push(YW.db.putMany('tagGroups', YW.state.tagGroups));
+      if (mig.changed) {
+        writes.push(YW.db.putMany('exams', YW.state.exams));
+        writes.push(YW.db.putMany('mistakes', YW.state.mistakes));
+      }
       return Promise.all(writes);
     }).then(function () {
       if (!YW.state.templates.length) {
@@ -194,6 +284,10 @@ window.YW = window.YW || {};
     }).catch(function (err) {
       console.error('[启动失败]', err);
       useFallback();
+      if (!YW.state.students.length) {
+        YW.state.students = [{ id: 'stu-default', name: '学生 1', createdAt: Date.now() }];
+      }
+      YW.state.currentStudentId = YW.state.students[0].id;
       renderAll();
       YW.ui.banner('初始化出错：' + (err && err.message ? err.message : '未知错误') + '。可以继续试用，但请检查浏览器是否禁用了本地存储。');
     });
@@ -204,4 +298,7 @@ window.YW = window.YW || {};
   } else {
     start();
   }
+
+  // 给测试用
+  YW.boot = { migrate: migrate };
 })(window.YW);

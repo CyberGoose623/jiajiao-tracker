@@ -10,6 +10,8 @@ window.YW = window.YW || {};
     tagGroups: [],
     exams: [],
     mistakes: [],
+    students: [],
+    currentStudentId: null,
     settings: {
       lastBackupAt: null
     },
@@ -17,12 +19,150 @@ window.YW = window.YW || {};
       page: 'entry',
       excludeEssay: false,
       range: 0,
-      trendDim: ''
+      trendDim: '',
+      templateId: ''
     },
     bannerSuppressed: false
   };
 
   YW.ui = {
+    /* ---------- 学生 ---------- */
+    currentStudent: function () {
+      var list = YW.state.students || [];
+      return list.filter(function (s) { return s.id === YW.state.currentStudentId; })[0] || list[0] || null;
+    },
+
+    examsOfCurrentStudent: function () {
+      return YW.calc.byStudent(YW.state.exams, YW.state.currentStudentId);
+    },
+
+    templatesOfCurrentStudent: function () {
+      var ids = YW.calc.templatesOfStudent(YW.state.exams, YW.state.currentStudentId);
+      // 该学生用过的排前面，其余按模板列表顺序跟上
+      var used = ids.map(function (id) {
+        return YW.state.templates.filter(function (t) { return t.id === id; })[0];
+      }).filter(Boolean);
+      var rest = YW.state.templates.filter(function (t) { return ids.indexOf(t.id) < 0; });
+      return used.concat(rest);
+    },
+
+    renderStudentBar: function () {
+      var s = YW.ui.currentStudent();
+      var nameEl = YW.$('#student-bar-name');
+      var subEl = YW.$('#student-bar-sub');
+      if (!nameEl) return;
+      if (!s) {
+        nameEl.textContent = '还没有学生';
+        subEl.textContent = '';
+        return;
+      }
+      nameEl.textContent = s.name;
+      var n = YW.calc.byStudent(YW.state.exams, s.id).length;
+      subEl.textContent = n ? n + ' 次考试' : '还没有记录';
+      YW.analysis.render();
+    },
+
+    switchStudent: function (id) {
+      if (!YW.state.students.some(function (s) { return s.id === id; })) return;
+      YW.state.currentStudentId = id;
+      YW.state.view.templateId = '';
+      YW.db.setMeta('currentStudentId', id);
+      YW.ui.closeSheet();
+      YW.ui.renderStudentBar();
+      YW.entry.refresh();
+      YW.analysis.render();
+      YW.settings.render();
+    },
+
+    openStudentPicker: function () {
+      var body = YW.el('div');
+      var list = YW.state.students || [];
+
+      if (!list.length) {
+        body.appendChild(YW.el('p', { class: 'hint', text: '还没有学生。' }));
+      }
+
+      list.forEach(function (s) {
+        var n = YW.calc.byStudent(YW.state.exams, s.id).length;
+        var on = s.id === YW.state.currentStudentId;
+        body.appendChild(YW.el('button', {
+          type: 'button',
+          class: 'student-row' + (on ? ' is-on' : ''),
+          onclick: function () { YW.ui.switchStudent(s.id); }
+        }, [
+          YW.el('span', { class: 'student-name', text: s.name }),
+          YW.el('span', { class: 'student-meta', text: n + ' 次考试' }),
+          on ? YW.el('span', { class: 'student-check', text: '当前' }) : null
+        ]));
+      });
+
+      var add = YW.el('button', {
+        type: 'button', class: 'btn primary block',
+        onclick: function () { YW.ui.closeSheet(); YW.ui.openStudentForm(null); }
+      }, ['新建学生']);
+      var foot = YW.el('div', { style: 'width:100%' }, [add]);
+
+      YW.ui.openSheet('选择学生', body, [foot]);
+    },
+
+    openStudentForm: function (student) {
+      var editing = !!student;
+      var nameInput = YW.el('input', {
+        class: 'control', type: 'text', value: student ? student.name : '',
+        placeholder: '学生姓名或代号', autocomplete: 'off'
+      });
+      var err = YW.el('p', { class: 'hint', style: 'color:#a8452a' });
+      var body = YW.el('div', {}, [
+        YW.el('div', { class: 'field' }, [
+          YW.el('label', { text: '名字' }),
+          nameInput
+        ]),
+        err
+      ]);
+
+      var saveBtn = YW.el('button', {
+        type: 'button', class: 'btn primary',
+        onclick: function () {
+          var name = nameInput.value.trim();
+          if (!name) { err.textContent = '名字不能空着'; return; }
+
+          if (editing) {
+            student.name = name;
+            YW.db.put('students', student).then(function () {
+              YW.ui.closeSheet();
+              YW.ui.renderStudentBar();
+              YW.settings.render();
+              YW.ui.toast('已改名', 2200);
+            });
+            return;
+          }
+
+          var rec = { id: YW.uid('stu'), name: name, createdAt: Date.now() };
+          YW.state.students.push(rec);
+          // 先同步切过去，UI 不能等落库
+          YW.state.currentStudentId = rec.id;
+          YW.state.view.templateId = '';
+          YW.ui.closeSheet();
+          YW.ui.renderStudentBar();
+          YW.entry.refresh();
+          YW.analysis.render();
+          YW.settings.render();
+
+          YW.db.put('students', rec).then(function () {
+            return YW.db.setMeta('currentStudentId', rec.id);
+          }).then(function () {
+            YW.ui.toast('已新建 ' + name + '，当前已切到这个学生', 3000);
+          }).catch(function (err) {
+            YW.ui.toast('学生已加上，但保存出错：' + (err && err.message ? err.message : '未知'), 3600);
+          });
+        }
+      }, [editing ? '保存' : '新建并切换']);
+
+      var cancel = YW.el('button', { type: 'button', class: 'btn', onclick: YW.ui.closeSheet }, ['取消']);
+      YW.ui.openSheet(editing ? '改学生名字' : '新建学生', body, [cancel, saveBtn]);
+      setTimeout(function () { nameInput.focus(); }, 150);
+    },
+
     go: function (page) {
       YW.state.view.page = page;
       YW.$$('.page').forEach(function (p) { p.hidden = p.dataset.page !== page; });
@@ -78,6 +218,11 @@ window.YW = window.YW || {};
       document.body.style.overflow = '';
     },
 
+    openPhoto: function (url, title) {
+      var img = YW.el('img', { src: url, alt: title || '试卷照片', class: 'photo-full' });
+      YW.ui.openSheet(title || '试卷照片', YW.el('div', { class: 'photo-full-wrap' }, [img]), []);
+    },
+
     /* 带文本框的确认弹层：用于导出前命名等 */
     prompt: function (title, message, defaultValue, onConfirm) {
       var input = YW.el('input', { class: 'control', type: 'text', value: defaultValue || '' });
@@ -120,9 +265,10 @@ window.YW = window.YW || {};
     exportAll: function (withPhotos) {
       var s = YW.state;
       var payload = {
-        schemaVersion: 1,
+        schemaVersion: 2,
         kind: 'yuwen-tracker-backup',
         exportedAt: new Date().toISOString(),
+        students: s.students,
         templates: s.templates,
         tagGroups: s.tagGroups,
         exams: s.exams,
@@ -156,8 +302,15 @@ window.YW = window.YW || {};
         YW.ui.toast('文件里没找到考试记录或模板', 3200); return Promise.resolve();
       }
 
-      var added = { templates: 0, tagGroups: 0, tagMerged: 0, exams: 0, mistakes: 0, images: 0 };
+      var added = { students: 0, templates: 0, tagGroups: 0, tagMerged: 0, exams: 0, mistakes: 0, images: 0 };
       var s = YW.state;
+
+      // 学生：同 id 跳过
+      (data.students || []).forEach(function (st) {
+        if (!st || !st.id) return;
+        if (s.students.some(function (x) { return x.id === st.id; })) return;
+        s.students.push(st); added.students++;
+      });
 
       // 模板：同 id 跳过（保留本地）
       (data.templates || []).forEach(function (t) {

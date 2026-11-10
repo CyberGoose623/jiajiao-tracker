@@ -5,7 +5,7 @@
 <title>语文得分追踪</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#2f6b5e">
-<meta name="description" content="初一家教用：按小题记录语文考试得分与失分原因，跨卷比较得分率。纯前端离线可用。">
+<meta name="description" content="家教用：按学生、按小题记录考试得分与失分原因，跨卷比较得分率。纯前端离线可用。">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -24,6 +24,13 @@
     <button type="button" class="banner-close" id="banner-close" aria-label="关闭提示">×</button>
   </div>
 
+  <div class="student-bar" id="student-bar" role="button" tabindex="0" aria-label="切换学生">
+    <span class="student-bar-label">学生</span>
+    <span class="student-bar-name" id="student-bar-name">—</span>
+    <span class="student-bar-sub" id="student-bar-sub"></span>
+    <span class="student-bar-arrow" aria-hidden="true">切换</span>
+  </div>
+
   <main class="page-scroll" id="scroller">
 
     <!-- ========== 录入 ========== -->
@@ -31,7 +38,7 @@
       <header class="page-head">
         <div>
           <h1>录入</h1>
-          <p class="page-sub" id="entry-sub">选模板，改答错那几道就行</p>
+          <p class="page-sub">选模板，改答错那几道就行</p>
         </div>
       </header>
 
@@ -53,7 +60,7 @@
         <div class="field" id="essay-level-field" hidden>
           <label for="entry-essay-level">作文档位</label>
           <select id="entry-essay-level" class="control">
-            <option value="">未评档</option>
+            <option value="">未评档（按作文分自动折算）</option>
             <option value="1">一类（45-50）</option>
             <option value="2">二类（40-44）</option>
             <option value="3">三类（35-39）</option>
@@ -63,14 +70,12 @@
           <p class="hint" id="essay-hint"></p>
         </div>
         <div class="photo-row">
-          <button type="button" class="btn ghost small" id="entry-photo-btn">试卷照片</button>
-          <span class="hint" id="entry-photo-hint">可选，挂一张原卷照片</span>
-          <button type="button" class="btn link small" id="entry-photo-clear" hidden>去掉</button>
-          <input type="file" id="entry-photo-input" accept="image/*" hidden>
+          <button type="button" class="btn ghost small" id="entry-photo-btn">添加试卷照片</button>
+          <span class="hint" id="entry-photo-hint">可选，可以挂多张</span>
+          <button type="button" class="btn link small" id="entry-photo-clear" hidden>全清</button>
+          <input type="file" id="entry-photo-input" accept="image/*" multiple hidden>
         </div>
-        <div class="photo-preview" id="entry-photo-preview" hidden>
-          <img alt="试卷照片预览">
-        </div>
+        <div class="thumb-row" id="entry-photo-list"></div>
       </div>
 
       <div class="live-bar" id="entry-live">
@@ -89,7 +94,7 @@
 
       <div class="actions">
         <button type="button" class="btn primary block" id="entry-save">保存这次考试</button>
-        <p class="hint center" id="entry-save-hint">答错的题才需要改分数，其余保持满分就行</p>
+        <p class="hint center" id="entry-save-hint">答错的题才需要改分数，其余保持满分；失分题会自动进错题本</p>
       </div>
     </section>
 
@@ -98,9 +103,16 @@
       <header class="page-head">
         <div>
           <h1>分析</h1>
-          <p class="page-sub">全部按得分率算，跨卷可比</p>
+          <p class="page-sub" id="analysis-scope">按得分率算，跨卷可比</p>
         </div>
       </header>
+
+      <div class="toolbar">
+        <label class="inline-field grow">
+          <span>看哪份</span>
+          <select id="analysis-template" class="control small grow"></select>
+        </label>
+      </div>
 
       <div class="toolbar">
         <div class="segment" id="seg-essay" role="group" aria-label="是否排除作文">
@@ -178,9 +190,18 @@
       <header class="page-head">
         <div>
           <h1>设置</h1>
-          <p class="page-sub">备份和文件都在这儿</p>
+          <p class="page-sub">学生、模板、错因、备份</p>
         </div>
       </header>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>学生</h2>
+          <button type="button" class="mini-btn" id="btn-student-add">+ 新建学生</button>
+        </div>
+        <div id="student-list" class="manage-list"></div>
+        <p class="hint">不同学生各算各的，统计不会互相混。</p>
+      </div>
 
       <div class="card backup-card" id="backup-card">
         <h2>备份</h2>
@@ -203,34 +224,41 @@
       </div>
 
       <div class="card">
-        <h2>试卷模板 <span class="hint" id="tpl-count"></span></h2>
-        <p class="hint">外面改 exam-templates.json 刷新后生效；这里也能直接改、新建、导出。</p>
+        <div class="card-head">
+          <h2>试卷模板 <span class="hint" id="tpl-count"></span></h2>
+          <button type="button" class="mini-btn" id="btn-tpl-new">+ 新建模板</button>
+        </div>
+        <div id="template-list" class="manage-list"></div>
         <div class="btn-row wrap">
-          <button type="button" class="btn" id="btn-tpl-edit">编辑模板 JSON</button>
           <button type="button" class="btn" id="btn-tpl-export">导出 JSON</button>
           <button type="button" class="btn" id="btn-tpl-import">导入 JSON</button>
         </div>
         <input type="file" id="tpl-import-input" accept="application/json,.json" hidden>
+        <p class="hint">模板是全局共享的，一份卷子可以对所有学生用。模板名建议写成 地区-学段-科目，像「西安-初中-语文」。</p>
       </div>
 
       <div class="card">
-        <h2>错因词表 <span class="hint" id="tag-count"></span></h2>
-        <p class="hint">外面改 error-tags.json 刷新后生效；这里也能直接改、导出。</p>
+        <div class="card-head">
+          <h2>错因词表 <span class="hint" id="tag-count"></span></h2>
+        </div>
+        <div id="tag-list" class="manage-list"></div>
         <div class="btn-row wrap">
-          <button type="button" class="btn" id="btn-tag-edit">编辑词表 JSON</button>
           <button type="button" class="btn" id="btn-tag-export">导出 JSON</button>
           <button type="button" class="btn" id="btn-tag-import">导入 JSON</button>
         </div>
         <input type="file" id="tag-import-input" accept="application/json,.json" hidden>
+        <p class="hint">错因按科目分组。语文的标签只在语文模板里出现，英语不会串。</p>
       </div>
 
       <div class="card">
-        <h2>错题本</h2>
-        <p class="hint" id="mistake-count">共 0 条</p>
+        <div class="card-head">
+          <h2>错题本</h2>
+          <span class="hint" id="mistake-count">共 0 条</span>
+        </div>
         <div class="btn-row wrap">
           <button type="button" class="btn" id="btn-mistake-view">查看错题本</button>
-          <button type="button" class="btn" id="btn-mistake-export">导出错题本</button>
-          <button type="button" class="btn ghost" id="btn-mistake-clear">清空错题本</button>
+          <button type="button" class="btn" id="btn-mistake-export">导出当前学生错题</button>
+          <button type="button" class="btn ghost" id="btn-mistake-clear">清空当前学生错题</button>
         </div>
       </div>
 
@@ -257,7 +285,6 @@
     </button>
   </nav>
 
-  <!-- 底部抽屉：错因选择 / 通用弹层 -->
   <div class="sheet-backdrop" id="sheet-backdrop" hidden>
     <div class="sheet" id="sheet" role="dialog" aria-modal="true">
       <div class="sheet-head">

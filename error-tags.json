@@ -1,8 +1,9 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "groups": [
     {
-      "id": "g-jilei",
+      "id": "g-yw-jilei",
+      "subject": "语文",
       "name": "积累和运用",
       "tags": [
         { "id": "t-yinxing", "name": "形近字混" },
@@ -15,7 +16,8 @@
       ]
     },
     {
-      "id": "g-mingzhu",
+      "id": "g-yw-mingzhu",
+      "subject": "语文",
       "name": "名著阅读",
       "tags": [
         { "id": "t-qingjie", "name": "情节记混" },
@@ -24,7 +26,8 @@
       ]
     },
     {
-      "id": "g-wenyan",
+      "id": "g-yw-wenyan",
+      "subject": "语文",
       "name": "文言文",
       "tags": [
         { "id": "t-shiciyi", "name": "实词义项记错" },
@@ -35,7 +38,8 @@
       ]
     },
     {
-      "id": "g-xiandai",
+      "id": "g-yw-xiandai",
+      "subject": "语文",
       "name": "现代文",
       "tags": [
         { "id": "t-shenti", "name": "审题偏差" },
@@ -48,7 +52,8 @@
       ]
     },
     {
-      "id": "g-gushi",
+      "id": "g-yw-gushi",
+      "subject": "语文",
       "name": "古诗鉴赏",
       "tags": [
         { "id": "t-yixiang", "name": "意象理解错" },
@@ -57,7 +62,8 @@
       ]
     },
     {
-      "id": "g-xiezuo",
+      "id": "g-yw-xiezuo",
+      "subject": "语文",
       "name": "写作",
       "tags": [
         { "id": "t-pianti", "name": "偏题" },
@@ -69,7 +75,8 @@
       ]
     },
     {
-      "id": "g-common",
+      "id": "g-yw-common",
+      "subject": "语文",
       "name": "通用",
       "tags": [
         { "id": "t-cuxin", "name": "粗心看错题" },

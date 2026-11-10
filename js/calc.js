@@ -44,6 +44,58 @@ window.YW = window.YW || {};
     return list.filter(function (a) { return !isEssayAnswer(a); });
   }
 
+  /* ---------- 学生 / 模板 维度 ---------- */
+
+  /** 按学生过滤考试 */
+  function byStudent(exams, studentId) {
+    if (!studentId) return exams || [];
+    return (exams || []).filter(function (e) { return e.studentId === studentId; });
+  }
+
+  /** 按模板过滤考试（用于"语文分析"和"英语分析"互不混算） */
+  function byTemplate(exams, templateId) {
+    if (!templateId) return exams || [];
+    return (exams || []).filter(function (e) { return e.templateId === templateId; });
+  }
+
+  /** 某个学生用过哪些模板，按最近使用时间倒序 */
+  function templatesOfStudent(exams, studentId) {
+    var seen = {};
+    var list = [];
+    byStudent(exams, studentId).slice().sort(function (a, b) {
+      return (b.createdAt || 0) - (a.createdAt || 0);
+    }).forEach(function (e) {
+      if (!e.templateId || seen[e.templateId]) return;
+      seen[e.templateId] = true;
+      list.push(e.templateId);
+    });
+    return list;
+  }
+
+  /** 模板的科目，缺省当语文 */
+  function subjectOf(template) {
+    return (template && template.subject) || '语文';
+  }
+
+  /** 按科目取错因分组 */
+  function tagGroupsFor(template, allGroups) {
+    var subject = subjectOf(template);
+    return (allGroups || []).filter(function (g) {
+      return ((g && g.subject) || '语文') === subject;
+    });
+  }
+
+  /** 全部科目名（去重，按出现顺序） */
+  function subjectsOf(templates) {
+    var seen = {};
+    var out = [];
+    (templates || []).forEach(function (t) {
+      var s = subjectOf(t);
+      if (!seen[s]) { seen[s] = true; out.push(s); }
+    });
+    return out;
+  }
+
   /** 总分与得分率 */
   function totals(exam, opts) {
     var list = answersOf(exam, opts);
@@ -114,8 +166,9 @@ window.YW = window.YW || {};
   /** 错因频次：全部考试统计；同时算出最近两次 / 前两次的对比 */
   function tagStats(exams, opts) {
     var sorted = sortExams(exams);
+    var groups = (opts && opts.tagGroups) || (YW.state && YW.state.tagGroups) || [];
     var tagName = {};
-    (YW.state.tagGroups || []).forEach(function (g) {
+    groups.forEach(function (g) {
       (g.tags || []).forEach(function (t) { tagName[t.id] = t.name; });
     });
 
@@ -204,6 +257,68 @@ window.YW = window.YW || {};
     return { ok: errors.length === 0, errors: errors };
   }
 
+  /**
+   * 根据一次考试自动生成错题记录。
+   * 返回 {create:[], update:[], resolve:[]}，由调用方落库。
+   * 规则：失分题生成/更新；从失分变成满分的，标记 resolved，不删用户手写内容。
+   */
+  function buildMistakes(exam, existing, template) {
+    var old = (existing || []).filter(function (m) { return m.examId === exam.id; });
+    var oldMap = {};
+    old.forEach(function (m) { oldMap[m.itemId] = m; });
+
+    var create = [], update = [], resolve = [];
+    var labelMap = {};
+    if (template) {
+      templateItems(template).forEach(function (e) { labelMap[e.item.id] = e.item.label || ''; });
+    }
+
+    (exam.answers || []).forEach(function (a) {
+      var lost = Number(a.gotScore) < Number(a.fullScore);
+      var prev = oldMap[a.itemId];
+
+      if (lost) {
+        if (prev) {
+          var prevTags = prev.errorTagIds || [];
+          var nowTags = a.errorTagIds || [];
+          var sameTags = prevTags.length === nowTags.length &&
+            prevTags.every(function (t) { return nowTags.indexOf(t) >= 0; });
+          // 分数改回来过，或者错因标签动过，都要同步一次
+          if (prev.resolved || !sameTags) {
+            update.push(Object.assign({}, prev, {
+              resolved: false,
+              no: a.no,
+              label: labelMap[a.itemId] || prev.label,
+              errorTagIds: nowTags.slice()
+            }));
+          }
+        } else {
+          create.push({
+            id: YW.uid('err'),
+            examId: exam.id,
+            studentId: exam.studentId || null,
+            itemId: a.itemId,
+            no: a.no,
+            label: labelMap[a.itemId] || '',
+            question: '第 ' + a.no + ' 题' + (labelMap[a.itemId] ? ' · ' + labelMap[a.itemId] : ''),
+            myAnswer: '',
+            correctAnswer: '',
+            errorTagIds: (a.errorTagIds || []).slice(),
+            howToFix: '',
+            auto: true,
+            mastered: false,
+            resolved: false,
+            createdAt: Date.now()
+          });
+        }
+      } else if (prev && !prev.resolved) {
+        resolve.push(prev);
+      }
+    });
+
+    return { create: create, update: update, resolve: resolve };
+  }
+
   YW.calc = {
     DIMENSIONS: DIMENSIONS,
     RADAR_DIMS: RADAR_DIMS,
@@ -223,6 +338,13 @@ window.YW = window.YW || {};
     essayLevelOf: essayLevelOf,
     tagStats: tagStats,
     templateItems: templateItems,
+    byStudent: byStudent,
+    byTemplate: byTemplate,
+    templatesOfStudent: templatesOfStudent,
+    subjectOf: subjectOf,
+    tagGroupsFor: tagGroupsFor,
+    subjectsOf: subjectsOf,
+    buildMistakes: buildMistakes,
     validateTemplate: validateTemplate,
     validateTags: validateTags
   };
