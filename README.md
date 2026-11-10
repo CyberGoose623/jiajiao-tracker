@@ -171,22 +171,82 @@ https://你的用户名.github.io/仓库名/
       "subject": "语文",
       "totalScore": 120,
       "duration": 150,
-      "note": "积累 20 + 阅读 50 + 写作 50",
+      "note": "按 2026 陕西中考语文真题和西光中学七上期中卷归纳。积累和运用 24 + 阅读 46 + 写作 50。各校自出卷可微调小题分值，总分保持 120。",
       "sections": [
         {
           "id": "sec-jilei",
-          "name": "一、积累和运用（20 分）",
+          "name": "一、积累和运用（24 分）",
           "items": [
-            { "id": "i-1", "no": "1", "fullScore": 2, "dimension": "jilei", "type": "choice", "label": "字音字形" },
-            { "id": "i-4", "no": "4", "fullScore": 4, "dimension": "mingzhu", "type": "written", "label": "名著阅读" },
-            { "id": "i-6-1", "no": "6(1)", "fullScore": 2, "dimension": "jilei", "type": "blank", "label": "古诗文默写" }
+            {
+              "id": "i-1",
+              "no": "1",
+              "fullScore": 2,
+              "dimension": "jilei",
+              "type": "choice",
+              "label": "字音辨析"
+            },
+            {
+              "id": "i-2",
+              "no": "2",
+              "fullScore": 2,
+              "dimension": "jilei",
+              "type": "written",
+              "label": "错别字订正"
+            },
+            {
+              "id": "i-3",
+              "no": "3",
+              "fullScore": 11,
+              "dimension": "jilei",
+              "type": "blank",
+              "label": "古诗文默写"
+            },
+            {
+              "id": "i-4",
+              "no": "4",
+              "fullScore": 2,
+              "dimension": "jilei",
+              "type": "written",
+              "label": "句子成分"
+            },
+            {
+              "id": "i-5",
+              "no": "5",
+              "fullScore": 2,
+              "dimension": "jilei",
+              "type": "written",
+              "label": "标点符号"
+            },
+            {
+              "id": "i-6",
+              "no": "6",
+              "fullScore": 2,
+              "dimension": "jilei",
+              "type": "written",
+              "label": "语意连贯补写"
+            },
+            {
+              "id": "i-7",
+              "no": "7",
+              "fullScore": 3,
+              "dimension": "mingzhu",
+              "type": "written",
+              "label": "名著阅读"
+            }
           ]
         },
         {
           "id": "sec-xiezuo",
           "name": "六、写作（50 分）",
           "items": [
-            { "id": "i-20", "no": "20", "fullScore": 50, "dimension": "xiezuo", "type": "essay", "label": "作文" }
+            {
+              "id": "i-21",
+              "no": "21",
+              "fullScore": 50,
+              "dimension": "xiezuo",
+              "type": "essay",
+              "label": "作文"
+            }
           ]
         }
       ]
@@ -223,21 +283,73 @@ https://你的用户名.github.io/仓库名/
   "schemaVersion": 2,
   "groups": [
     {
-      "id": "g-yw-wenyan",
+      "id": "g-yw-jilei",
       "subject": "语文",
-      "name": "文言文",
+      "name": "积累和运用",
       "tags": [
-        { "id": "t-shiciyi", "name": "实词义项记错" },
-        { "id": "t-xuci", "name": "虚词用法不清" },
-        { "id": "t-fanyi", "name": "翻译漏关键词" }
+        {
+          "id": "t-yinxing",
+          "name": "形近字混"
+        },
+        {
+          "id": "t-duoyin",
+          "name": "多音字读错"
+        },
+        {
+          "id": "t-cuobie",
+          "name": "错别字没找出"
+        },
+        {
+          "id": "t-moxie-lou",
+          "name": "默写漏字"
+        },
+        {
+          "id": "t-moxie-cuo",
+          "name": "默写错字"
+        },
+        {
+          "id": "t-chuanhang",
+          "name": "上下句串行"
+        },
+        {
+          "id": "t-chengfen",
+          "name": "句子成分判错"
+        },
+        {
+          "id": "t-biaodian",
+          "name": "标点用错"
+        },
+        {
+          "id": "t-guodu",
+          "name": "补写不连贯"
+        },
+        {
+          "id": "t-chenshu",
+          "name": "没紧扣活动情境"
+        }
       ]
     },
     {
-      "id": "g-en-grammar",
-      "subject": "英语",
-      "name": "语法",
+      "id": "g-yw-common",
+      "subject": "语文",
+      "name": "通用",
       "tags": [
-        { "id": "t-en-tense", "name": "时态错" }
+        {
+          "id": "t-cuxin",
+          "name": "粗心看错题"
+        },
+        {
+          "id": "t-shijian",
+          "name": "时间不够"
+        },
+        {
+          "id": "t-louti",
+          "name": "漏答小题"
+        },
+        {
+          "id": "t-juanmian",
+          "name": "卷面失分"
+        }
       ]
     }
   ]
@@ -451,7 +563,7 @@ https://你的用户名.github.io/仓库名/
 前两套不需要装依赖：
 
 ```bash
-node tests/selftest.js    # 101 项：计算规则、学生/科目隔离、自动错题、静态资源
+node tests/selftest.js    # 104 项：计算规则、学生/科目隔离、自动错题、静态资源
 node tests/smoke.js       # DOM id、样式类、脚本顺序、禁止项
 ```
 
@@ -459,7 +571,7 @@ node tests/smoke.js       # DOM id、样式类、脚本顺序、禁止项
 
 ```bash
 npm install jsdom fake-indexeddb --no-save
-node tests/e2e.js         # 67 项：真加载页面跑完整流程
+node tests/e2e.js         # 75 项：真加载页面跑完整流程
 ```
 
 `selftest.js` 覆盖：模板结构、分数合计、维度口径、加权得分率与简单平均对比、排除作文重算、作文档位、快照隔离、按学生过滤、按模板过滤、学生间互不影响、科目错因不串、自动错题生成与去重、改满分标 resolved、空数据不报错、资源相对路径、无 CDN、manifest 图标、SW 预缓存清单。

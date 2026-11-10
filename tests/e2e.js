@@ -84,8 +84,8 @@ function setInput(win, input, value) {
   check('启动完成，题目行已渲染', booted);
   check('模板来自 exam-templates.json（120 分）', YW.state.templates[0].totalScore === 120);
   check('模板科目是语文', YW.state.templates[0].subject === '语文');
-  check('错因词表 7 组 34 个标签', YW.state.tagGroups.length === 7 &&
-    YW.state.tagGroups.reduce((a, g) => a + g.tags.length, 0) === 34);
+  check('错因词表 8 组 54 个标签', YW.state.tagGroups.length === 8 &&
+    YW.state.tagGroups.reduce((a, g) => a + g.tags.length, 0) === 54);
   check('首次启动自动建了一个学生', YW.state.students.length === 1, String(YW.state.students.length));
   check('默认学生被选中', YW.state.currentStudentId === YW.state.students[0].id);
   check('顶部学生条显示名字', win.document.querySelector('#student-bar-name').textContent === YW.state.students[0].name);
@@ -93,7 +93,7 @@ function setInput(win, input, value) {
 
   console.log('\n[E2E] 录入 + 自动错题');
   const rows = [...win.document.querySelectorAll('#entry-items .item-row')];
-  check('题目行数 = 22', rows.length === 22, String(rows.length));
+  check('题目行数 = 21', rows.length === 21, String(rows.length));
   check('默认全部满分', win.document.querySelector('#live-total').textContent === '120');
 
   const inputs = [...win.document.querySelectorAll('#entry-items .score-input')];
@@ -102,7 +102,7 @@ function setInput(win, input, value) {
   const i11 = [...win.document.querySelectorAll('#entry-items .item-row')]
     .findIndex((r) => r.querySelector('.item-no').textContent === '11');
   setInput(win, inputs[i11], '2');
-  check('两道失分后总分 116', win.document.querySelector('#live-total').textContent === '116',
+  check('两道失分后总分 117', win.document.querySelector('#live-total').textContent === '117',
     win.document.querySelector('#live-total').textContent);
 
   win.document.querySelector('#entry-name').value = '初一期中考试';
@@ -114,13 +114,13 @@ function setInput(win, input, value) {
   check('考试挂了学生 id', exam.studentId === YW.state.students[0].id, String(exam.studentId));
   check('试卷图是数组（这次为空）', Array.isArray(exam.paperImageIds) && exam.paperImageIds.length === 0);
   check('模板快照是深拷贝', exam.templateSnapshot && exam.templateSnapshot !== YW.state.templates[0]);
-  check('总分 116', YW.calc.totals(exam, {}).got === 116, String(YW.calc.totals(exam, {}).got));
+  check('总分 117', YW.calc.totals(exam, {}).got === 117, String(YW.calc.totals(exam, {}).got));
 
   const mistakes = YW.state.mistakes.filter((m) => m.examId === exam.id);
   check('失分题自动生成错题 2 条', mistakes.length === 2, String(mistakes.length));
   check('错题带学生 id', mistakes.every((m) => m.studentId === exam.studentId));
   check('错题能定位到哪道题', mistakes.every((m) => m.itemId && m.no));
-  check('错题带考什么标签', mistakes.some((m) => m.label === '情节情感梳理'));
+  check('错题带考什么标签', mistakes.some((m) => m.label === '情节内容梳理'));
   check('满分题没进错题本', !mistakes.some((m) => m.itemId === 'i-2'));
   check('错题默认未掌握未订正', mistakes.every((m) => m.mastered === false && m.resolved === false));
 
@@ -128,7 +128,7 @@ function setInput(win, input, value) {
   win.document.querySelectorAll('#entry-items .tag-btn')[0].click();
   await sleep(100);
   const chips = [...win.document.querySelectorAll('.tag-chip')];
-  check('语文模板只显示语文的 34 个标签', chips.length === 34, String(chips.length));
+  check('语文模板只显示语文的 54 个标签', chips.length === 54, String(chips.length));
   chips[0].click();
   win.document.querySelector('.sheet-foot .btn.primary').click();
   await sleep(60);
@@ -303,7 +303,7 @@ function setInput(win, input, value) {
   check('fetch 失败时用内置兜底模板', win2.YW.state.templates.length === 1 && win2.YW.state.templates[0].totalScore === 120);
   check('兜底模板也带科目', win2.YW.state.templates[0].subject === '语文');
   check('fetch 失败时给明确提示条', !win2.document.querySelector('#banner').hidden);
-  check('兜底后能渲染题目行', win2.document.querySelectorAll('#entry-items .item-row').length === 22);
+  check('兜底后能渲染题目行', win2.document.querySelectorAll('#entry-items .item-row').length === 21);
   check('兜底后也有默认学生', win2.YW.state.students.length >= 1);
 
   console.log('\n============================');

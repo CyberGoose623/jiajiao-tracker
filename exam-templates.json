@@ -6,65 +6,64 @@
       "name": "西安-初中-语文",
       "subject": "语文",
       "totalScore": 120,
-      "duration": 120,
-      "note": "西光中学 2026-2027 学年七上期中卷结构。积累 24 + 阅读 46 + 写作 50。文言文翻译按两句计 4 分，如与实卷不符在设置页改。",
+      "duration": 150,
+      "note": "按 2026 陕西中考语文真题和西光中学七上期中卷归纳。积累和运用 24 + 阅读 46 + 写作 50。各校自出卷可微调小题分值，总分保持 120。",
       "sections": [
         {
           "id": "sec-jilei",
           "name": "一、积累和运用（24 分）",
           "items": [
-            { "id": "i-1", "no": "1", "fullScore": 2, "dimension": "jilei", "type": "blank", "label": "拼音写汉字" },
+            { "id": "i-1", "no": "1", "fullScore": 2, "dimension": "jilei", "type": "choice", "label": "字音辨析" },
             { "id": "i-2", "no": "2", "fullScore": 2, "dimension": "jilei", "type": "written", "label": "错别字订正" },
             { "id": "i-3", "no": "3", "fullScore": 11, "dimension": "jilei", "type": "blank", "label": "古诗文默写" },
-            { "id": "i-4", "no": "4", "fullScore": 2, "dimension": "jilei", "type": "written", "label": "病句修改" },
-            { "id": "i-5", "no": "5", "fullScore": 2, "dimension": "jilei", "type": "written", "label": "标点修改" },
-            { "id": "i-6", "no": "6", "fullScore": 2, "dimension": "jilei", "type": "choice", "label": "词性判断" },
-            { "id": "i-7", "no": "7", "fullScore": 3, "dimension": "mingzhu", "type": "written", "label": "名著人物分析" }
+            { "id": "i-4", "no": "4", "fullScore": 2, "dimension": "jilei", "type": "written", "label": "句子成分" },
+            { "id": "i-5", "no": "5", "fullScore": 2, "dimension": "jilei", "type": "written", "label": "标点符号" },
+            { "id": "i-6", "no": "6", "fullScore": 2, "dimension": "jilei", "type": "written", "label": "语意连贯补写" },
+            { "id": "i-7", "no": "7", "fullScore": 3, "dimension": "mingzhu", "type": "written", "label": "名著阅读" }
           ]
         },
         {
           "id": "sec-feilianxu",
           "name": "二、非连续性文本阅读（9 分）",
           "items": [
-            { "id": "i-8", "no": "8", "fullScore": 3, "dimension": "xiandai", "type": "written", "label": "材料信息概括" },
-            { "id": "i-9", "no": "9", "fullScore": 3, "dimension": "xiandai", "type": "choice", "label": "材料理解辨析" },
-            { "id": "i-10", "no": "10", "fullScore": 3, "dimension": "xiandai", "type": "written", "label": "传承对策建议" }
+            { "id": "i-8", "no": "8", "fullScore": 2, "dimension": "xiandai", "type": "written", "label": "材料信息概括" },
+            { "id": "i-9", "no": "9", "fullScore": 4, "dimension": "xiandai", "type": "written", "label": "材料分析探究" },
+            { "id": "i-10", "no": "10", "fullScore": 3, "dimension": "xiandai", "type": "choice", "label": "材料理解辨析" }
           ]
         },
         {
-          "id": "sec-xiandai",
-          "name": "三、记叙文阅读（21 分）",
+          "id": "sec-wenxue",
+          "name": "三、文学类文本阅读（21 分）",
           "items": [
-            { "id": "i-11", "no": "11", "fullScore": 4, "dimension": "xiandai", "type": "written", "label": "情节情感梳理" },
-            { "id": "i-12", "no": "12", "fullScore": 3, "dimension": "xiandai", "type": "written", "label": "语言赏析" },
-            { "id": "i-13", "no": "13", "fullScore": 4, "dimension": "xiandai", "type": "written", "label": "心理描写分析" },
-            { "id": "i-14", "no": "14", "fullScore": 4, "dimension": "xiandai", "type": "written", "label": "句子含义理解" },
-            { "id": "i-15", "no": "15", "fullScore": 6, "dimension": "xiandai", "type": "written", "label": "拓展比较阅读" }
+            { "id": "i-11", "no": "11", "fullScore": 3, "dimension": "xiandai", "type": "written", "label": "情节内容梳理" },
+            { "id": "i-12", "no": "12", "fullScore": 6, "dimension": "xiandai", "type": "written", "label": "内容理解简答" },
+            { "id": "i-13", "no": "13", "fullScore": 6, "dimension": "xiandai", "type": "written", "label": "语句理解与构思" },
+            { "id": "i-14", "no": "14", "fullScore": 6, "dimension": "xiandai", "type": "written", "label": "人物作用分析" }
           ]
         },
         {
           "id": "sec-wenyan",
           "name": "四、文言文阅读（12 分）",
           "items": [
-            { "id": "i-16", "no": "16", "fullScore": 4, "dimension": "wenyan", "type": "blank", "label": "文言词语解释" },
-            { "id": "i-17", "no": "17", "fullScore": 2, "dimension": "wenyan", "type": "choice", "label": "文言虚词辨析" },
-            { "id": "i-18", "no": "18", "fullScore": 4, "dimension": "wenyan", "type": "written", "label": "文言句子翻译" },
-            { "id": "i-19", "no": "19", "fullScore": 2, "dimension": "wenyan", "type": "written", "label": "学习启示" }
+            { "id": "i-15", "no": "15", "fullScore": 4, "dimension": "wenyan", "type": "blank", "label": "文言词语解释" },
+            { "id": "i-16", "no": "16", "fullScore": 2, "dimension": "wenyan", "type": "choice", "label": "文言虚词辨析" },
+            { "id": "i-17", "no": "17", "fullScore": 4, "dimension": "wenyan", "type": "written", "label": "文言句子翻译" },
+            { "id": "i-18", "no": "18", "fullScore": 2, "dimension": "wenyan", "type": "written", "label": "内容概述" }
           ]
         },
         {
           "id": "sec-gushi",
           "name": "五、古代诗歌鉴赏（4 分）",
           "items": [
-            { "id": "i-20", "no": "20", "fullScore": 2, "dimension": "gushi", "type": "blank", "label": "诗歌内容理解" },
-            { "id": "i-21", "no": "21", "fullScore": 2, "dimension": "gushi", "type": "written", "label": "诗歌情感分析" }
+            { "id": "i-19", "no": "19", "fullScore": 1, "dimension": "gushi", "type": "blank", "label": "韵脚等常识" },
+            { "id": "i-20", "no": "20", "fullScore": 3, "dimension": "gushi", "type": "written", "label": "诗句赏析" }
           ]
         },
         {
           "id": "sec-xiezuo",
           "name": "六、写作（50 分）",
           "items": [
-            { "id": "i-22", "no": "22", "fullScore": 50, "dimension": "xiezuo", "type": "essay", "label": "作文《温暖的相伴》" }
+            { "id": "i-21", "no": "21", "fullScore": 50, "dimension": "xiezuo", "type": "essay", "label": "作文" }
           ]
         }
       ]

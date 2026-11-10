@@ -8,11 +8,14 @@
       "tags": [
         { "id": "t-yinxing", "name": "形近字混" },
         { "id": "t-duoyin", "name": "多音字读错" },
-        { "id": "t-ciyuse", "name": "词语色彩误用" },
-        { "id": "t-bingju", "name": "病句类型判错" },
+        { "id": "t-cuobie", "name": "错别字没找出" },
         { "id": "t-moxie-lou", "name": "默写漏字" },
         { "id": "t-moxie-cuo", "name": "默写错字" },
-        { "id": "t-chuanhang", "name": "上下句串行" }
+        { "id": "t-chuanhang", "name": "上下句串行" },
+        { "id": "t-chengfen", "name": "句子成分判错" },
+        { "id": "t-biaodian", "name": "标点用错" },
+        { "id": "t-guodu", "name": "补写不连贯" },
+        { "id": "t-chenshu", "name": "没紧扣活动情境" }
       ]
     },
     {
@@ -22,7 +25,39 @@
       "tags": [
         { "id": "t-qingjie", "name": "情节记混" },
         { "id": "t-renwu", "name": "人物对应错" },
-        { "id": "t-pingjia", "name": "没答评价" }
+        { "id": "t-zhuti", "name": "主题理解偏" },
+        { "id": "t-geshi", "name": "没按示例格式写" },
+        { "id": "t-pingjia", "name": "缺评价阐述" }
+      ]
+    },
+    {
+      "id": "g-yw-feilianxu",
+      "subject": "语文",
+      "name": "非连续性文本",
+      "tags": [
+        { "id": "t-dingwei", "name": "信息定位错" },
+        { "id": "t-gaikuo", "name": "概括漏点" },
+        { "id": "t-bijiao", "name": "没做材料间比较" },
+        { "id": "t-xuanxiang", "name": "选项判断失误" },
+        { "id": "t-tuoli", "name": "脱离材料作答" },
+        { "id": "t-tuanduan", "name": "推断过度" }
+      ]
+    },
+    {
+      "id": "g-yw-wenxue",
+      "subject": "语文",
+      "name": "文学类文本",
+      "tags": [
+        { "id": "t-shenti", "name": "审题偏差" },
+        { "id": "t-jiaodu", "name": "答题角度不全" },
+        { "id": "t-yuanwen", "name": "没结合原文" },
+        { "id": "t-shuyu", "name": "术语用错" },
+        { "id": "t-gaikuo-wen", "name": "情节概括不全" },
+        { "id": "t-zuoyong", "name": "作用类题答偏" },
+        { "id": "t-qinggan", "name": "情感理解偏" },
+        { "id": "t-gousi", "name": "没看出构思妙处" },
+        { "id": "t-renwu-zuo", "name": "人物作用分析不全" },
+        { "id": "t-bufendian", "name": "没按分值分点" }
       ]
     },
     {
@@ -33,32 +68,21 @@
         { "id": "t-shiciyi", "name": "实词义项记错" },
         { "id": "t-xuci", "name": "虚词用法不清" },
         { "id": "t-fanyi", "name": "翻译漏关键词" },
+        { "id": "t-yiwen", "name": "译句不通顺" },
         { "id": "t-wenyi", "name": "文意理解偏" },
-        { "id": "t-duanju", "name": "断句错" }
-      ]
-    },
-    {
-      "id": "g-yw-xiandai",
-      "subject": "语文",
-      "name": "现代文",
-      "tags": [
-        { "id": "t-shenti", "name": "审题偏差" },
-        { "id": "t-jiaodu", "name": "答题角度不全" },
-        { "id": "t-yuanwen", "name": "没结合原文" },
-        { "id": "t-shuyu", "name": "术语用错" },
-        { "id": "t-gaikuo", "name": "概括漏点" },
-        { "id": "t-zuoyong", "name": "作用类题答偏" },
-        { "id": "t-qinggan", "name": "情感理解偏" }
+        { "id": "t-gaishu", "name": "概述不完整" }
       ]
     },
     {
       "id": "g-yw-gushi",
       "subject": "语文",
-      "name": "古诗鉴赏",
+      "name": "古代诗歌",
       "tags": [
+        { "id": "t-yunjiao", "name": "韵脚等常识不明" },
         { "id": "t-yixiang", "name": "意象理解错" },
         { "id": "t-shoufa", "name": "手法判断错" },
-        { "id": "t-qinggan-gu", "name": "情感概括偏" }
+        { "id": "t-qinggan-gu", "name": "情感概括偏" },
+        { "id": "t-liyou", "name": "只表态没理由" }
       ]
     },
     {
@@ -67,11 +91,13 @@
       "name": "写作",
       "tags": [
         { "id": "t-pianti", "name": "偏题" },
-        { "id": "t-sucai", "name": "素材空" },
-        { "id": "t-jiegou", "name": "结构散" },
-        { "id": "t-yuyan", "name": "语言平" },
+        { "id": "t-sucai", "name": "素材空泛" },
+        { "id": "t-jiegou", "name": "结构松散" },
+        { "id": "t-yuyan", "name": "语言平淡" },
         { "id": "t-zishu", "name": "字数不足" },
-        { "id": "t-kaitou", "name": "开头结尾弱" }
+        { "id": "t-kaitou", "name": "开头结尾弱" },
+        { "id": "t-biaoti", "name": "没拟标题" },
+        { "id": "t-shuxie-liao", "name": "书写潦草" }
       ]
     },
     {
@@ -81,7 +107,8 @@
       "tags": [
         { "id": "t-cuxin", "name": "粗心看错题" },
         { "id": "t-shijian", "name": "时间不够" },
-        { "id": "t-shuxie-liao", "name": "书写潦草" }
+        { "id": "t-louti", "name": "漏答小题" },
+        { "id": "t-juanmian", "name": "卷面失分" }
       ]
     }
   ]

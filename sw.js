@@ -1,7 +1,7 @@
 /* Service Worker：静态资源全量缓存，断网可用
    全部使用相对路径，兼容 GitHub Pages 子路径
 */
-const CACHE = 'yuwen-v4';
+const CACHE = 'yuwen-v5';
 
 const ASSETS = [
   './',
