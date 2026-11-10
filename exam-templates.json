@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "templates": [
+    {
+      "id": "tpl-xa-g7-120",
+      "name": "西安市初一语文 120 分卷",
+      "totalScore": 120,
+      "duration": 150,
+      "note": "参考陕西省中考语文结构，各校自行调整。积累和运用 20 + 阅读 50 + 写作 50。",
+      "sections": [
+        {
+          "id": "sec-jilei",
+          "name": "一、积累和运用（20 分）",
+          "items": [
+            { "id": "i-1", "no": "1", "fullScore": 2, "dimension": "jilei", "type": "choice", "label": "字音字形" },
+            { "id": "i-2", "no": "2", "fullScore": 2, "dimension": "jilei", "type": "choice", "label": "词语运用" },
+            { "id": "i-3", "no": "3", "fullScore": 2, "dimension": "jilei", "type": "written", "label": "病句修改" },
+            { "id": "i-4", "no": "4", "fullScore": 4, "dimension": "mingzhu", "type": "written", "label": "名著阅读" },
+            { "id": "i-5", "no": "5", "fullScore": 4, "dimension": "jilei", "type": "written", "label": "综合性学习" },
+            { "id": "i-6-1", "no": "6(1)", "fullScore": 2, "dimension": "jilei", "type": "blank", "label": "古诗文默写" },
+            { "id": "i-6-2", "no": "6(2)", "fullScore": 2, "dimension": "jilei", "type": "blank", "label": "古诗文默写" },
+            { "id": "i-6-3", "no": "6(3)", "fullScore": 2, "dimension": "jilei", "type": "blank", "label": "古诗文默写" }
+          ]
+        },
+        {
+          "id": "sec-xiandai-xu",
+          "name": "二、现代文阅读（记叙文，18 分）",
+          "items": [
+            { "id": "i-7", "no": "7", "fullScore": 4, "dimension": "xiandai", "type": "written", "label": "概括情节" },
+            { "id": "i-8", "no": "8", "fullScore": 4, "dimension": "xiandai", "type": "written", "label": "赏析句子" },
+            { "id": "i-9", "no": "9", "fullScore": 5, "dimension": "xiandai", "type": "written", "label": "分析人物形象" },
+            { "id": "i-10", "no": "10", "fullScore": 5, "dimension": "xiandai", "type": "written", "label": "主旨理解" }
+          ]
+        },
+        {
+          "id": "sec-feilianxu",
+          "name": "三、非连续性文本阅读（14 分）",
+          "items": [
+            { "id": "i-11", "no": "11", "fullScore": 4, "dimension": "xiandai", "type": "choice", "label": "信息提取" },
+            { "id": "i-12", "no": "12", "fullScore": 5, "dimension": "xiandai", "type": "written", "label": "材料比较" },
+            { "id": "i-13", "no": "13", "fullScore": 5, "dimension": "xiandai", "type": "written", "label": "综合表述" }
+          ]
+        },
+        {
+          "id": "sec-wenyan",
+          "name": "四、文言文阅读（14 分）",
+          "items": [
+            { "id": "i-14", "no": "14", "fullScore": 2, "dimension": "wenyan", "type": "choice", "label": "实词解释" },
+            { "id": "i-15", "no": "15", "fullScore": 2, "dimension": "wenyan", "type": "choice", "label": "虚词辨析" },
+            { "id": "i-16", "no": "16", "fullScore": 2, "dimension": "wenyan", "type": "written", "label": "断句" },
+            { "id": "i-17", "no": "17", "fullScore": 4, "dimension": "wenyan", "type": "written", "label": "句子翻译" },
+            { "id": "i-18", "no": "18", "fullScore": 4, "dimension": "wenyan", "type": "written", "label": "文意理解" }
+          ]
+        },
+        {
+          "id": "sec-gushi",
+          "name": "五、古代诗歌鉴赏（4 分）",
+          "items": [
+            { "id": "i-19", "no": "19", "fullScore": 4, "dimension": "gushi", "type": "written", "label": "诗歌赏析" }
+          ]
+        },
+        {
+          "id": "sec-xiezuo",
+          "name": "六、写作（50 分）",
+          "items": [
+            { "id": "i-20", "no": "20", "fullScore": 50, "dimension": "xiezuo", "type": "essay", "label": "作文" }
+          ]
+        }
+      ]
+    }
+  ]
+}
