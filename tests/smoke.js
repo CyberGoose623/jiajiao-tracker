@@ -79,10 +79,28 @@ if (!/\.tab\b[\s\S]{0,200}min-height/.test(css)) bad('页签没有最小点击�
 
 console.log('\n[6] 禁止项');
 const allJs = jsFiles.map((f) => fs.readFileSync(path.join(ROOT, 'js', f), 'utf8')).join('\n');
-if (/localStorage/.test(allJs)) bad('代码里出现 localStorage（主数据必须用 IndexedDB）');
+// localStorage 只允许存主题这类界面偏好，不允许存主数据
+const lsLines = allJs.split('\n').filter((line) => line.includes('localStorage'));
+const lsBad = lsLines.filter((line) => !/yuwen-theme/.test(line));
+if (lsBad.length) bad('localStorage 被用于主数据：' + lsBad[0].trim().slice(0, 60));
+if (/localStorage[\s\S]{0,80}(exams|templates|tagGroups|mistakes|students)/.test(allJs)) {
+  bad('主数据出现在 localStorage 附近');
+}
 if (/fetch\(\s*['"]https?:/.test(allJs)) bad('出现外部网络请求');
 if (/XMLHttpRequest/.test(allJs)) bad('出现 XHR 请求');
 if (/CDN|cdn\./.test(html)) bad('index.html 里出现 CDN 引用');
+
+console.log('\n[7] 深色主题');
+const cssText = css;
+if (!/html\[data-theme="dark"\]/.test(cssText)) bad('CSS 缺深色主题变量块');
+if (!/color-scheme:\s*dark/.test(cssText)) bad('深色块缺 color-scheme: dark');
+if (!/prefers-color-scheme/.test(html)) bad('index.html 缺系统深色探测');
+if (!/data-theme/.test(html)) bad('index.html 首屏缺主题脚本');
+if (!/data-theme-mode/.test(html)) bad('设置页缺主题切换按钮');
+['--c-line', '--heat-0', '--c-bar'].forEach((v) => {
+  const n = cssText.split(v).length - 1;
+  if (n < 2) bad('CSS 变量 ' + v + ' 没有浅色/深色两套');
+});
 
 console.log('\n============================');
 console.log(problems ? '发现 ' + problems + ' 个问题' : '冒烟检查通过，0 个问题');

@@ -1,5 +1,5 @@
 /* 原生 SVG 图表，无第三方库
-   按容器实际像素宽度绘制，避免 viewBox 缩放把文字压小
+   颜色全部从 CSS 变量读，切深色主题时重绘即可
 */
 window.YW = window.YW || {};
 (function (YW) {
@@ -17,26 +17,79 @@ window.YW = window.YW || {};
     return node;
   }
 
+  function cssVar(name, fallback) {
+    try {
+      var v = getComputedStyle(document.documentElement).getPropertyValue(name);
+      if (v && v.trim()) return v.trim();
+    } catch (e) {}
+    return fallback;
+  }
+
+  function pal() {
+    return {
+      line: cssVar('--c-line', '#2f6b5e'),
+      lineSoft: cssVar('--c-line-soft', 'rgba(47,107,94,.10)'),
+      grid: cssVar('--c-grid', '#e8e2d5'),
+      gridStrong: cssVar('--c-grid-strong', '#cfc6b3'),
+      axis: cssVar('--c-axis', '#8b8476'),
+      axisText: cssVar('--c-axis-text', '#5d574b'),
+      dot: cssVar('--c-dot-bg', '#fffdf7'),
+      label: cssVar('--c-label', '#7d766a'),
+      rowLabel: cssVar('--c-row-label', '#4a453c'),
+      bar: cssVar('--c-bar', '#2f6b5e'),
+      barText: cssVar('--c-bar-text', '#332f27'),
+      up: cssVar('--c-up', '#a8452a'),
+      down: cssVar('--c-down', '#2f6b5e'),
+      level: cssVar('--c-level', '#7a5a86'),
+      heat0: cssVar('--heat-0', '#8a3a21'),
+      heat1: cssVar('--heat-1', '#c87c5c'),
+      heat2: cssVar('--heat-2', '#e8f0e8'),
+      heatEmpty: cssVar('--heat-empty', '#f5f1e7'),
+      heatEmptyText: cssVar('--heat-empty-text', '#a8a294'),
+      heatStroke: cssVar('--heat-stroke', '#e6dfcf')
+    };
+  }
+
+  function hexToRgb(c) {
+    var str = String(c).trim();
+    if (str.charAt(0) === '#') {
+      var h = str.slice(1);
+      if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+      if (h.length !== 6) return null;
+      return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+    }
+    var m = /rgba?\(([^)]+)\)/.exec(str);
+    if (m) {
+      var p = m[1].split(',').map(function (x) { return parseFloat(x); });
+      return [p[0], p[1], p[2]];
+    }
+    return null;
+  }
+
+  function mix(a, b, k) {
+    return [
+      Math.round(a[0] + (b[0] - a[0]) * k),
+      Math.round(a[1] + (b[1] - a[1]) * k),
+      Math.round(a[2] + (b[2] - a[2]) * k)
+    ];
+  }
+
+  function rgbStr(c) { return 'rgb(' + c.join(',') + ')'; }
+
+  /** 按底色亮度决定字色，浅色格子用深字，深色格子用白字 */
+  function textOn(rgb) {
+    var lum = (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) / 255;
+    return lum > 0.6 ? '#1a1a15' : '#fffdf7';
+  }
+
   function emptyState(host, msg) {
     host.innerHTML = '';
     host.appendChild(YW.el('div', { class: 'empty', text: msg }));
   }
 
   function widthOf(host) {
-    var w = host.clientWidth || host.parentNode && host.parentNode.clientWidth || 320;
+    var w = host.clientWidth || (host.parentNode && host.parentNode.clientWidth) || 320;
     return Math.max(260, Math.floor(w));
-  }
-
-  function textColorFor(t) { return t < 0.55 ? '#fffdf7' : '#332f27'; }
-
-  function heatColor(t) {
-    // 0 -> 深（警示），1 -> 浅
-    var lo = [138, 58, 33], mid = [200, 124, 92], hi = [232, 240, 232];
-    var a, b, k;
-    if (t < 0.55) { a = lo; b = mid; k = t / 0.55; }
-    else { a = mid; b = hi; k = (t - 0.55) / 0.45; }
-    var c = a.map(function (v, i) { return Math.round(v + (b[i] - v) * k); });
-    return 'rgb(' + c.join(',') + ')';
   }
 
   var registry = [];
@@ -61,6 +114,7 @@ window.YW = window.YW || {};
     var points = (opts && opts.points) || [];
     if (!points.length) { emptyState(host, '还没有考试记录。录入一次之后，这里会出现第一个点。'); return; }
 
+    var P = pal();
     host.innerHTML = '';
     var W = widthOf(host);
     var n = points.length;
@@ -76,12 +130,12 @@ window.YW = window.YW || {};
       var y = pad.t + (1 - t) * plotH;
       svg.appendChild(s('line', {
         x1: pad.l, x2: W - pad.r, y1: y, y2: y,
-        stroke: t === 0 ? '#cfc6b3' : '#e8e2d5',
+        stroke: t === 0 ? P.gridStrong : P.grid,
         'stroke-width': 1
       }));
       svg.appendChild(s('text', {
         x: pad.l - 8, y: y + 4, 'text-anchor': 'end',
-        'font-size': 11, fill: '#8b8476'
+        'font-size': 11, fill: P.axis
       }, Math.round(t * 100) + '%'));
     });
 
@@ -91,31 +145,28 @@ window.YW = window.YW || {};
     });
     function yOf(v) { return pad.t + (1 - Math.max(0, Math.min(1, v))) * plotH; }
 
-    // 面积
     var areaPts = xs.map(function (x, i) { return x + ',' + yOf(points[i].value); });
     svg.appendChild(s('path', {
       d: 'M' + xs[0] + ',' + (pad.t + plotH) + ' L' + areaPts.join(' L') + ' L' + xs[n - 1] + ',' + (pad.t + plotH) + ' Z',
-      fill: 'rgba(47,107,94,.10)'
+      fill: P.lineSoft
     }));
 
-    // 折线
     if (n > 1) {
       svg.appendChild(s('polyline', {
         points: areaPts.join(' '),
-        fill: 'none', stroke: '#2f6b5e', 'stroke-width': 2.4,
+        fill: 'none', stroke: P.line, 'stroke-width': 2.4,
         'stroke-linejoin': 'round', 'stroke-linecap': 'round'
       }));
     }
 
     var tip = YW.el('div', { class: 'tooltip' });
     tip.hidden = true;
-    host.appendChild(tip);
 
     var showEvery = n > 10 ? Math.ceil(n / 8) : 1;
 
     points.forEach(function (p, i) {
       var x = xs[i], y = yOf(p.value);
-      svg.appendChild(s('circle', { cx: x, cy: y, r: 4.6, fill: '#fffdf7', stroke: '#2f6b5e', 'stroke-width': 2.2 }));
+      svg.appendChild(s('circle', { cx: x, cy: y, r: 4.6, fill: P.dot, stroke: P.line, 'stroke-width': 2.2 }));
 
       var hit = s('circle', { cx: x, cy: y, r: Math.max(14, plotW / (n * 2)), fill: 'transparent', style: 'cursor:pointer' });
       hit.addEventListener('pointerenter', function () { showTip(tip, host, p, x, y); });
@@ -126,7 +177,7 @@ window.YW = window.YW || {};
       if (i % showEvery === 0 || i === n - 1) {
         svg.appendChild(s('text', {
           x: x, y: pad.t + plotH + 20,
-          'text-anchor': 'middle', 'font-size': 11, fill: '#7d766a'
+          'text-anchor': 'middle', 'font-size': 11, fill: P.label
         }, p.label));
       }
     });
@@ -158,6 +209,7 @@ window.YW = window.YW || {};
     var hidden = host.__hidden;
 
     function draw() {
+      var P = pal();
       host.innerHTML = '';
       var W = widthOf(host);
       var H = Math.max(300, Math.min(380, Math.round(W * 0.72)));
@@ -178,18 +230,18 @@ window.YW = window.YW || {};
         var pts = [];
         for (var i = 0; i < count; i++) pts.push(pt(i, ring).join(','));
         svg.appendChild(s('polygon', {
-          points: pts.join(' '), fill: 'none', stroke: '#e2dbcb', 'stroke-width': 1
+          points: pts.join(' '), fill: 'none', stroke: P.grid, 'stroke-width': 1
         }));
       });
 
       axes.forEach(function (ax, i) {
         var outer = pt(i, 1);
-        svg.appendChild(s('line', { x1: cx, y1: cy, x2: outer[0], y2: outer[1], stroke: '#e2dbcb', 'stroke-width': 1 }));
+        svg.appendChild(s('line', { x1: cx, y1: cy, x2: outer[0], y2: outer[1], stroke: P.grid, 'stroke-width': 1 }));
         var lp = pt(i, 1.17);
         svg.appendChild(s('text', {
           x: lp[0], y: lp[1] + 4,
           'text-anchor': Math.abs(lp[0] - cx) < 6 ? 'middle' : (lp[0] > cx ? 'start' : 'end'),
-          'font-size': 12, fill: '#5d574b'
+          'font-size': 12, fill: P.axisText
         }, ax.label));
       });
 
@@ -200,7 +252,7 @@ window.YW = window.YW || {};
         });
         svg.appendChild(s('polygon', {
           points: pts.join(' '),
-          fill: poly.color, 'fill-opacity': 0.14,
+          fill: poly.color, 'fill-opacity': 0.16,
           stroke: poly.color, 'stroke-width': 2
         }));
         poly.values.forEach(function (v, i) {
@@ -246,6 +298,15 @@ window.YW = window.YW || {};
       return;
     }
 
+    var P = pal();
+    var H0 = hexToRgb(P.heat0), H1 = hexToRgb(P.heat1), H2 = hexToRgb(P.heat2);
+
+    function heatColor(t) {
+      if (!H0 || !H1 || !H2) return P.heat1;
+      var c = t < 0.55 ? mix(H0, H1, t / 0.55) : mix(H1, H2, (t - 0.55) / 0.45);
+      return rgbStr(c);
+    }
+
     host.innerHTML = '';
     var W = widthOf(host);
     var labelW = 78;
@@ -267,29 +328,29 @@ window.YW = window.YW || {};
     cols.forEach(function (c, i) {
       svg.appendChild(s('text', {
         x: labelW + cellW * i + cellW / 2, y: 20,
-        'text-anchor': 'middle', 'font-size': 10.5, fill: '#7d766a'
+        'text-anchor': 'middle', 'font-size': 10.5, fill: P.label
       }, c.short));
     });
 
     rows.forEach(function (row, ri) {
       var y = topH + ri * rowH;
       svg.appendChild(s('text', {
-        x: 0, y: y + rowH / 2 + 4, 'font-size': 12.5, fill: '#4a453c'
+        x: 0, y: y + rowH / 2 + 4, 'font-size': 12.5, fill: P.rowLabel
       }, row.label));
       cols.forEach(function (c, ci) {
         var v = row.values[ci];
         var x = labelW + ci * cellW;
         var w = cellW - 4;
         var t = v == null ? null : Math.max(0, Math.min(1, v));
+        var fillC = t == null ? P.heatEmpty : heatColor(t);
         svg.appendChild(s('rect', {
           x: x, y: y + 4, width: w, height: rowH - 10, rx: 6,
-          fill: t == null ? '#f5f1e7' : heatColor(t),
-          stroke: '#e6dfcf', 'stroke-width': 0.8
+          fill: fillC, stroke: P.heatStroke, 'stroke-width': 0.8
         }));
+        var txt = t == null ? P.heatEmptyText : textOn(hexToRgb(fillC) || [128, 128, 128]);
         svg.appendChild(s('text', {
           x: x + w / 2, y: y + rowH / 2 + 4, 'text-anchor': 'middle',
-          'font-size': 11.5, 'font-weight': 600,
-          fill: t == null ? '#a8a294' : textColorFor(t)
+          'font-size': 11.5, 'font-weight': 600, fill: txt
         }, t == null ? '—' : Math.round(t * 100) + '%'));
       });
     });
@@ -303,6 +364,7 @@ window.YW = window.YW || {};
     var entries = ((opts && opts.entries) || []).slice(0, 8);
     if (!entries.length) { emptyState(host, '还没有标记过错因。录入时点一下就记上了。'); return; }
 
+    var P = pal();
     host.innerHTML = '';
     var W = widthOf(host);
     var labelW = Math.min(120, Math.max(84, Math.round(W * 0.28)));
@@ -318,24 +380,24 @@ window.YW = window.YW || {};
     entries.forEach(function (e, i) {
       var y = i * rowH;
       svg.appendChild(s('text', {
-        x: 0, y: y + rowH / 2 + 4.5, 'font-size': 12, fill: '#4a453c'
+        x: 0, y: y + rowH / 2 + 4.5, 'font-size': 12, fill: P.rowLabel
       }, e.name.length > 7 ? e.name.slice(0, 7) + '…' : e.name));
 
       var bw = Math.max(6, Math.round((e.count / maxCount) * barMax));
       svg.appendChild(s('rect', {
         x: labelW, y: y + rowH / 2 - 8, width: bw, height: 17, rx: 5,
-        fill: '#2f6b5e', 'fill-opacity': 0.86
+        fill: P.bar, 'fill-opacity': 0.88
       }));
 
       svg.appendChild(s('text', {
         x: labelW + bw + 8, y: y + rowH / 2 + 5, 'font-size': 12.5,
-        'font-weight': 600, fill: '#332f27'
+        'font-weight': 600, fill: P.barText
       }, String(e.count)));
 
       var delta = (e.recent || 0) - (e.prev || 0);
       if (e.recent || e.prev) {
         var arrow = delta > 0 ? '↑' : (delta < 0 ? '↓' : '→');
-        var color = delta > 0 ? '#a8452a' : (delta < 0 ? '#2f6b5e' : '#8b8476');
+        var color = delta > 0 ? P.up : (delta < 0 ? P.down : P.axis);
         svg.appendChild(s('text', {
           x: W - 4, y: y + rowH / 2 + 5, 'text-anchor': 'end',
           'font-size': 12, fill: color
@@ -352,6 +414,7 @@ window.YW = window.YW || {};
     var points = ((opts && opts.points) || []).filter(function (p) { return p.level != null; });
     if (!points.length) { emptyState(host, '还没有填过作文档位。'); return; }
 
+    var P = pal();
     host.innerHTML = '';
     var W = widthOf(host);
     var H = 210;
@@ -366,8 +429,8 @@ window.YW = window.YW || {};
     var names = ['一类', '二类', '三类', '四类', '五类'];
     for (var lv = 1; lv <= 5; lv++) {
       var y = pad.t + ((lv - 1) / 4) * plotH;
-      svg.appendChild(s('line', { x1: pad.l, x2: W - pad.r, y1: y, y2: y, stroke: '#e8e2d5', 'stroke-width': 1 }));
-      svg.appendChild(s('text', { x: pad.l - 8, y: y + 4, 'text-anchor': 'end', 'font-size': 11, fill: '#8b8476' }, names[lv - 1]));
+      svg.appendChild(s('line', { x1: pad.l, x2: W - pad.r, y1: y, y2: y, stroke: P.grid, 'stroke-width': 1 }));
+      svg.appendChild(s('text', { x: pad.l - 8, y: y + 4, 'text-anchor': 'end', 'font-size': 11, fill: P.axis }, names[lv - 1]));
     }
 
     function xOf(i) { return n === 1 ? pad.l + plotW / 2 : pad.l + (plotW * i) / (n - 1); }
@@ -376,19 +439,19 @@ window.YW = window.YW || {};
     var pts = points.map(function (p, i) { return xOf(i) + ',' + yOf(p.level); });
     if (n > 1) {
       svg.appendChild(s('polyline', {
-        points: pts.join(' '), fill: 'none', stroke: '#7a5a86', 'stroke-width': 2.2,
+        points: pts.join(' '), fill: 'none', stroke: P.level, 'stroke-width': 2.2,
         'stroke-linejoin': 'round', 'stroke-linecap': 'round'
       }));
     }
     points.forEach(function (p, i) {
-      svg.appendChild(s('circle', { cx: xOf(i), cy: yOf(p.level), r: 4.6, fill: '#fffdf7', stroke: '#7a5a86', 'stroke-width': 2.2 }));
+      svg.appendChild(s('circle', { cx: xOf(i), cy: yOf(p.level), r: 4.6, fill: P.dot, stroke: P.level, 'stroke-width': 2.2 }));
       svg.appendChild(s('text', {
-        x: xOf(i), y: pad.t + plotH + 20, 'text-anchor': 'middle', 'font-size': 10.5, fill: '#7d766a'
+        x: xOf(i), y: pad.t + plotH + 20, 'text-anchor': 'middle', 'font-size': 10.5, fill: P.label
       }, p.label));
     });
 
     host.appendChild(svg);
   }
 
-  YW.charts = { trend: trend, radar: radar, heat: heat, bars: bars, levels: levels, redrawAll: redrawAll };
+  YW.charts = { trend: trend, radar: radar, heat: heat, bars: bars, levels: levels, redrawAll: redrawAll, pal: pal };
 })(window.YW);

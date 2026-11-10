@@ -144,6 +144,8 @@ window.YW = window.YW || {};
   }
 
   function bindGlobal() {
+    YW.ui.bindTheme();
+
     YW.$('#tabbar').addEventListener('click', function (e) {
       var tab = e.target.closest('.tab');
       if (!tab) return;
