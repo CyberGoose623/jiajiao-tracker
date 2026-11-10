@@ -90,18 +90,6 @@ if (/fetch\(\s*['"]https?:/.test(allJs)) bad('出现外部网络请求');
 if (/XMLHttpRequest/.test(allJs)) bad('出现 XHR 请求');
 if (/CDN|cdn\./.test(html)) bad('index.html 里出现 CDN 引用');
 
-console.log('\n[7] 深色主题');
-const cssText = css;
-if (!/html\[data-theme="dark"\]/.test(cssText)) bad('CSS 缺深色主题变量块');
-if (!/color-scheme:\s*dark/.test(cssText)) bad('深色块缺 color-scheme: dark');
-if (!/prefers-color-scheme/.test(html)) bad('index.html 缺系统深色探测');
-if (!/data-theme/.test(html)) bad('index.html 首屏缺主题脚本');
-if (!/data-theme-mode/.test(html)) bad('设置页缺主题切换按钮');
-['--c-line', '--heat-0', '--c-bar'].forEach((v) => {
-  const n = cssText.split(v).length - 1;
-  if (n < 2) bad('CSS 变量 ' + v + ' 没有浅色/深色两套');
-});
-
 console.log('\n============================');
 console.log(problems ? '发现 ' + problems + ' 个问题' : '冒烟检查通过，0 个问题');
 process.exitCode = problems ? 1 : 0;

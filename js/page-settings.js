@@ -148,13 +148,65 @@ window.YW = window.YW || {};
         YW.el('button', {
           type: 'button', class: 'mini-btn',
           onclick: function () { openTemplateForm(t); }
-        }, ['编辑'])
+        }, ['编辑']),
+        YW.el('button', {
+          type: 'button', class: 'mini-btn',
+          onclick: function () { confirmDeleteTemplate(t); }
+        }, ['删除'])
       ]));
     });
 
     if (!YW.state.templates.length) {
       host.appendChild(YW.el('p', { class: 'hint', text: '还没有模板。' }));
     }
+  }
+
+  /* ---------- 删除模板 ---------- */
+  function confirmDeleteTemplate(tpl) {
+    var n = YW.state.exams.filter(function (e) { return e.templateId === tpl.id; }).length;
+    var isDefault = tpl.id === 'tpl-xa-g7-yuwen';
+
+    var body = YW.el('div', {}, [
+      YW.el('p', { text: '删除模板「' + tpl.name + '」？' }),
+      YW.el('p', {
+        class: 'hint',
+        style: 'margin-top:8px',
+        text: n
+          ? '这个模板下有 ' + n + ' 次考试记录。删模板不会删记录，但那些记录在分析页会归到一个自动补的「历史」模板里，还看得见。'
+          : '这个模板还没有考试记录，删了不影响任何数据。'
+      }),
+      isDefault
+        ? YW.el('p', {
+            class: 'hint',
+            style: 'margin-top:8px;color:#a8452a',
+            text: '注意：这是仓库自带的默认模板。删掉之后刷新页面，它会从 exam-templates.json 重新回来。想永久去掉，得改那个文件。'
+          })
+        : null
+    ]);
+
+    var ok = YW.el('button', {
+      type: 'button', class: 'btn danger',
+      onclick: function () {
+        YW.state.templates = YW.state.templates.filter(function (x) { return x.id !== tpl.id; });
+        YW.db.putMany('templates', YW.state.templates).then(function () {
+          // 当前选中的模板被删了，重选一个
+          if (YW.state.view.templateId === tpl.id) YW.state.view.templateId = '';
+          if (YW.entry.state && YW.entry.state.templateId === tpl.id) {
+            YW.entry.state.templateId = '';
+            YW.entry.state.builtTemplateId = null;
+          }
+          YW.ui.closeSheet();
+          YW.entry.refresh();
+          YW.analysis.render();
+          render();
+          YW.ui.toast('模板已删除', 2600);
+        }).catch(function (err) {
+          YW.ui.toast('删除失败：' + (err && err.message ? err.message : '未知'), 3200);
+        });
+      }
+    }, ['确认删除']);
+    var cancel = YW.el('button', { type: 'button', class: 'btn', onclick: YW.ui.closeSheet }, ['算了']);
+    YW.ui.openSheet('删除模板', body, [cancel, ok]);
   }
 
   /* ---------- 模板表单编辑器 ---------- */
@@ -376,10 +428,16 @@ window.YW = window.YW || {};
       var box = YW.el('div', { class: 'subject-block' }, [
         YW.el('div', { class: 'subject-head' }, [
           YW.el('span', { class: 'subject-name', text: subj }),
-          YW.el('button', {
-            type: 'button', class: 'mini-btn',
-            onclick: function () { openTagForm(subj, null); }
-          }, ['加分组'])
+          YW.el('span', { class: 'subject-acts' }, [
+            YW.el('button', {
+              type: 'button', class: 'mini-btn',
+              onclick: function () { openTagForm(subj, null); }
+            }, ['加分组']),
+            YW.el('button', {
+              type: 'button', class: 'mini-btn',
+              onclick: function () { confirmDeleteSubject(subj); }
+            }, ['删整科'])
+          ])
         ])
       ]);
       subjects[subj].forEach(function (g) {
@@ -391,7 +449,11 @@ window.YW = window.YW || {};
           YW.el('button', {
             type: 'button', class: 'mini-btn',
             onclick: function () { openTagForm(subj, g); }
-          }, ['编辑'])
+          }, ['编辑']),
+          YW.el('button', {
+            type: 'button', class: 'mini-btn',
+            onclick: function () { confirmDeleteTagGroup(g); }
+          }, ['删除'])
         ]));
       });
       host.appendChild(box);
@@ -487,6 +549,93 @@ window.YW = window.YW || {};
 
     var cancel = YW.el('button', { type: 'button', class: 'btn', onclick: YW.ui.closeSheet }, ['取消']);
     YW.ui.openSheet(editing ? '编辑错因分组' : '新建错因分组', bodyHost, [cancel, saveBtn]);
+  }
+
+  /* ---------- 删除错因 ---------- */
+  function countTagUsage(tagIds) {
+    var n = 0;
+    (YW.state.exams || []).forEach(function (e) {
+      (e.answers || []).forEach(function (a) {
+        if ((a.errorTagIds || []).some(function (id) { return tagIds.indexOf(id) >= 0; })) n++;
+      });
+    });
+    return n;
+  }
+
+  function confirmDeleteTagGroup(g) {
+    var ids = (g.tags || []).map(function (t) { return t.id; });
+    var used = countTagUsage(ids);
+
+    var body = YW.el('div', {}, [
+      YW.el('p', { text: '删除分组「' + g.name + '」和里面 ' + ids.length + ' 个标签？' }),
+      YW.el('p', {
+        class: 'hint',
+        style: 'margin-top:8px',
+        text: used
+          ? '有 ' + used + ' 道题用过这些标签。考试记录不会删，但那些题上的错因标签会变成失效 id，统计里不再显示。'
+          : '还没有题目用过这些标签，删了不影响任何数据。'
+      })
+    ]);
+
+    var ok = YW.el('button', {
+      type: 'button', class: 'btn danger',
+      onclick: function () {
+        YW.state.tagGroups = YW.state.tagGroups.filter(function (x) { return x.id !== g.id; });
+        YW.db.putMany('tagGroups', YW.state.tagGroups).then(function () {
+          YW.ui.closeSheet();
+          YW.entry.refresh();
+          YW.analysis.render();
+          render();
+          YW.ui.toast('分组已删除', 2600);
+        }).catch(function (err) {
+          YW.ui.toast('删除失败：' + (err && err.message ? err.message : '未知'), 3200);
+        });
+      }
+    }, ['确认删除']);
+    var cancel = YW.el('button', { type: 'button', class: 'btn', onclick: YW.ui.closeSheet }, ['算了']);
+    YW.ui.openSheet('删除错因分组', body, [cancel, ok]);
+  }
+
+  function confirmDeleteSubject(subj) {
+    var groups = YW.state.tagGroups.filter(function (g) { return (g.subject || '语文') === subj; });
+    var ids = [];
+    groups.forEach(function (g) { (g.tags || []).forEach(function (t) { ids.push(t.id); }); });
+    var used = countTagUsage(ids);
+
+    var body = YW.el('div', {}, [
+      YW.el('p', { text: '删除「' + subj + '」这一科的全部错因？' }),
+      YW.el('p', {
+        class: 'hint',
+        style: 'margin-top:8px',
+        text: '会删掉 ' + groups.length + ' 个分组、' + ids.length + ' 个标签。' +
+          (used ? '有 ' + used + ' 道题用过这些标签，考试记录不删，但标签会失效。' : '还没有题目用过。')
+      }),
+      YW.el('p', {
+        class: 'hint',
+        style: 'margin-top:8px',
+        text: '模板不用一起删。想连模板一起去，去上面「试卷模板」里删。'
+      })
+    ]);
+
+    var ok = YW.el('button', {
+      type: 'button', class: 'btn danger',
+      onclick: function () {
+        YW.state.tagGroups = YW.state.tagGroups.filter(function (g) {
+          return (g.subject || '语文') !== subj;
+        });
+        YW.db.putMany('tagGroups', YW.state.tagGroups).then(function () {
+          YW.ui.closeSheet();
+          YW.entry.refresh();
+          YW.analysis.render();
+          render();
+          YW.ui.toast('已删除「' + subj + '」的错因', 2800);
+        }).catch(function (err) {
+          YW.ui.toast('删除失败：' + (err && err.message ? err.message : '未知'), 3200);
+        });
+      }
+    }, ['确认删除']);
+    var cancel = YW.el('button', { type: 'button', class: 'btn', onclick: YW.ui.closeSheet }, ['算了']);
+    YW.ui.openSheet('删除一科错因', body, [cancel, ok]);
   }
 
   /* ---------- 错题本 ---------- */

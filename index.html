@@ -15,19 +15,6 @@
 <link rel="apple-touch-icon" href="./icons/icon-180.png">
 <link rel="icon" href="./icons/icon-192.png">
 <link rel="stylesheet" href="./styles.css">
-<script>
-/* 首屏定色，必须在渲染前跑，否则深色用户会先看见一下白 */
-(function () {
-  try {
-    var mode = localStorage.getItem('yuwen-theme') || 'auto';
-    var dark = mode === 'dark' || (mode === 'auto' &&
-      window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
-  } catch (e) {
-    document.documentElement.setAttribute('data-theme', 'light');
-  }
-})();
-</script>
 </head>
 <body>
 <div class="app" id="app">
@@ -273,18 +260,6 @@
           <button type="button" class="btn" id="btn-mistake-export">导出当前学生错题</button>
           <button type="button" class="btn ghost" id="btn-mistake-clear">清空当前学生错题</button>
         </div>
-      </div>
-
-      <div class="card">
-        <div class="card-head">
-          <h2>外观</h2>
-        </div>
-        <div class="segment theme-seg" id="theme-seg" role="group" aria-label="主题">
-          <button type="button" class="seg-btn" data-theme-mode="auto">跟随系统</button>
-          <button type="button" class="seg-btn" data-theme-mode="light">浅色</button>
-          <button type="button" class="seg-btn" data-theme-mode="dark">深色</button>
-        </div>
-        <p class="hint" id="theme-hint">跟随系统时，iPad 切到深色模式会自动跟着变。</p>
       </div>
 
       <div class="card">

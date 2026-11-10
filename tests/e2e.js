@@ -99,9 +99,9 @@ function setInput(win, input, value) {
   const inputs = [...win.document.querySelectorAll('#entry-items .score-input')];
   // 第 1 题（2 分）拿 0；第 7 题（记叙文 4 分）拿 2
   setInput(win, inputs[0], '0');
-  const i7 = [...win.document.querySelectorAll('#entry-items .item-row')]
-    .findIndex((r) => r.querySelector('.item-no').textContent === '7');
-  setInput(win, inputs[i7], '2');
+  const i11 = [...win.document.querySelectorAll('#entry-items .item-row')]
+    .findIndex((r) => r.querySelector('.item-no').textContent === '11');
+  setInput(win, inputs[i11], '2');
   check('两道失分后总分 116', win.document.querySelector('#live-total').textContent === '116',
     win.document.querySelector('#live-total').textContent);
 
@@ -120,7 +120,7 @@ function setInput(win, input, value) {
   check('失分题自动生成错题 2 条', mistakes.length === 2, String(mistakes.length));
   check('错题带学生 id', mistakes.every((m) => m.studentId === exam.studentId));
   check('错题能定位到哪道题', mistakes.every((m) => m.itemId && m.no));
-  check('错题带考什么标签', mistakes.some((m) => m.label === '概括情节'));
+  check('错题带考什么标签', mistakes.some((m) => m.label === '情节情感梳理'));
   check('满分题没进错题本', !mistakes.some((m) => m.itemId === 'i-2'));
   check('错题默认未掌握未订正', mistakes.every((m) => m.mastered === false && m.resolved === false));
 

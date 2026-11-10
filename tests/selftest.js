@@ -45,10 +45,10 @@ const dims = {};
 C.templateItems(tpl).forEach((e) => {
   dims[e.item.dimension] = (dims[e.item.dimension] || 0) + e.item.fullScore;
 });
-check('维度统计：积累和运用 16 分', dims.jilei === 16, String(dims.jilei));
-check('卷一（积累 16 + 名著 4）= 20 分', dims.jilei + dims.mingzhu === 20);
-check('阅读合计 50 分', dims.xiandai + dims.wenyan + dims.gushi === 50);
-check('题号包含小题形式 6(1)', C.templateItems(tpl).some((e) => e.item.no === '6(1)'));
+check('维度统计：积累和运用 21 分', dims.jilei === 21, String(dims.jilei));
+check('卷一（积累 21 + 名著 3）= 24 分', dims.jilei + dims.mingzhu === 24);
+check('阅读合计 46 分', dims.xiandai + dims.wenyan + dims.gushi === 46);
+check('题号是 1-22 连续', C.templateItems(tpl).length === 22 && C.templateItems(tpl)[21].item.no === '22');
 
 const dv = C.validateTags(tagDoc);
 check('错因词表校验通过', dv.ok, dv.errors && dv.errors.join('；'));
@@ -84,20 +84,20 @@ function makeExam(id, date, pairs, extra) {
 
 const weighted = makeExam('exam-t', '2026-10-01', [
   ['i-1', 0],
-  ['i-7', 4], ['i-8', 4], ['i-9', 5], ['i-10', 5]
+  ['i-11', 4], ['i-12', 3], ['i-13', 4], ['i-14', 4], ['i-15', 6]
 ]);
 const t1 = C.totals(weighted, {});
-check('得分率按满分加权（18/20=90%）', Math.abs(t1.rate - 0.9) < 1e-9, String(t1.rate));
-const naive = (0 / 2 + 18 / 18) / 2;
+check('得分率按满分加权（21/23）', Math.abs(t1.rate - 21/23) < 1e-9, String(t1.rate));
+const naive = (0 / 2 + 21 / 21) / 2;
 check('不是简单平均', Math.abs(t1.rate - naive) > 1e-6, 'naive=' + naive);
 
 const full = makeExam('exam-full', '2026-10-10', C.templateItems(tpl).map((e) => [e.item.id, e.item.fullScore]));
 check('满分卷 = 120/120 = 100%', C.totals(full, {}).got === 120 && C.totals(full, {}).rate === 1);
 check('排除作文后满分 70', C.totals(full, { excludeEssay: true }).full === 70);
 
-const essay41 = makeExam('exam-e', '2026-10-15', [['i-20', 41]]);
+const essay41 = makeExam('exam-e', '2026-10-15', [['i-22', 41]]);
 check('作文 41/50 折算二类', C.essayLevelOf(essay41) === 2);
-check('作文 29/50 折算五类', C.essayLevelOf(makeExam('exam-e2', '2026-10-16', [['i-20', 29]])) === 5);
+check('作文 29/50 折算五类', C.essayLevelOf(makeExam('exam-e2', '2026-10-16', [['i-22', 29]])) === 5);
 check('手动档位优先', C.essayLevelOf(Object.assign({}, essay41, { essayLevel: 1 })) === 1);
 
 // 快照隔离
@@ -137,13 +137,13 @@ check('英语模板只拿到英语的 1 组', C.tagGroupsFor({ subject: '英语'
 
 console.log('\n[4] 自动错题');
 const examForMistake = makeExam('exam-m', '2026-10-20', [
-  ['i-1', 0], ['i-2', 2], ['i-7', 2]
+  ['i-1', 0], ['i-2', 2], ['i-11', 2]
 ]);
 const plan1 = C.buildMistakes(examForMistake, [], tpl);
 check('失分题生成错题：2 条', plan1.create.length === 2, String(plan1.create.length));
 check('满分题不生成', !plan1.create.some((m) => m.itemId === 'i-2'));
 check('错题带 examId 和 itemId', plan1.create.every((m) => m.examId === 'exam-m' && m.itemId));
-check('错题带题号和考什么', plan1.create.some((m) => m.no === '7' && m.label === '概括情节'));
+check('错题带题号和考什么', plan1.create.some((m) => m.no === '11' && m.label === '情节情感梳理'));
 check('错题带学生 id', plan1.create.every((m) => m.studentId === 'stu-a'));
 
 // 第二次跑：已有记录，不重复创建

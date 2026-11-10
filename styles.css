@@ -84,79 +84,6 @@
   --font-title: "Songti SC", "Source Han Serif SC", "Noto Serif CJK SC", ui-serif, Georgia, serif;
 }
 
-/* ---------- 深色 ---------- */
-html[data-theme="dark"]{
-  color-scheme: dark;
-
-  --bg: #101210;
-  --surface: #191b18;
-  --surface-2: #21241f;
-  --ink: #e9e5da;
-  --ink-2: #c2bcae;
-  --muted: #8d8878;
-  --line: #2d302a;
-  --line-strong: #3f433a;
-  --accent: #57a390;
-  --accent-ink: #7ec0ad;
-  --accent-soft: #1b2f29;
-  --on-accent: #08130f;
-  --warn: #e08a63;
-  --warn-soft: #33211a;
-  --warn-line: #553024;
-  --ok: #57a390;
-
-  --header-bg: #1b2f29;
-  --header-ink: #cfe6dd;
-
-  --loss-bg: #221a16;
-  --loss-line: #4a3025;
-  --input-bg: #12140f;
-  --invalid-bg: #2e1c16;
-  --pressed-bg: #2a2d26;
-
-  --banner-bg: #33211a;
-  --banner-ink: #f0b89a;
-  --banner-line: #553024;
-
-  --toast-bg: #e9e5da;
-  --toast-ink: #14160f;
-
-  --scrim: rgba(0,0,0,.62);
-  --glass: rgba(25,27,24,.92);
-  --glass-2: rgba(25,27,24,.96);
-  --empty-a: #1a1c19;
-  --empty-b: #161815;
-
-  --badge-essay-bg: #33243a;
-  --badge-essay-ink: #d6b9dd;
-  --badge-blank-bg: #1f2a35;
-  --badge-blank-ink: #a8c2dc;
-
-  --c-line: #57a390;
-  --c-line-soft: rgba(87,163,144,.16);
-  --c-grid: #2b2e28;
-  --c-grid-strong: #3a3e35;
-  --c-axis: #7b766a;
-  --c-axis-text: #a8a294;
-  --c-dot-bg: #191b18;
-  --c-label: #8d8878;
-  --c-row-label: #c2bcae;
-  --c-bar: #57a390;
-  --c-bar-text: #e9e5da;
-  --c-up: #e08a63;
-  --c-down: #57a390;
-  --c-level: #b48cc0;
-
-  --heat-0: #c2633a;
-  --heat-1: #7d5638;
-  --heat-2: #21382f;
-  --heat-empty: #1e211d;
-  --heat-empty-text: #5d5a50;
-  --heat-stroke: #2d302a;
-
-  --shadow: 0 1px 2px rgba(0,0,0,.42), 0 6px 18px rgba(0,0,0,.3);
-}
-
 *{ box-sizing: border-box; }
 
 /* 作者样式里的 display 会盖掉浏览器默认的 [hidden]，这里统一钉死 */
@@ -509,7 +436,8 @@ textarea.control{ min-height: 120px; resize: vertical; line-height: 1.5; font-fa
 
 /* ---------- 抽屉 ---------- */
 .sheet-backdrop{
-  position: fixed; inset: 0;
+  position: fixed;
+  top: 0; right: 0; bottom: 0; left: 0;
   background: var(--scrim);
   z-index: 100;
   display: flex; align-items: flex-end; justify-content: center;

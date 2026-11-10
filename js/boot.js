@@ -144,18 +144,27 @@ window.YW = window.YW || {};
   }
 
   function bindGlobal() {
-    YW.ui.bindTheme();
+    var tabbar = YW.$('#tabbar');
+    if (tabbar) {
+      tabbar.addEventListener('click', function (e) {
+        var tab = e.target.closest ? e.target.closest('.tab') : null;
+        if (!tab) return;
+        YW.ui.go(tab.dataset.go);
+      });
+    }
 
-    YW.$('#tabbar').addEventListener('click', function (e) {
-      var tab = e.target.closest('.tab');
-      if (!tab) return;
-      YW.ui.go(tab.dataset.go);
-    });
-
-    // 顶部学生切换
-    YW.$('#student-bar').addEventListener('click', function () {
-      YW.ui.openStudentPicker();
-    });
+    var sbar = YW.$('#student-bar');
+    if (sbar) {
+      sbar.addEventListener('click', function () {
+        YW.ui.openStudentPicker();
+      });
+      sbar.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          YW.ui.openStudentPicker();
+        }
+      });
+    }
 
     // iOS：输入框获得焦点时，确保不被键盘挡住
     document.addEventListener('focusin', function (e) {
